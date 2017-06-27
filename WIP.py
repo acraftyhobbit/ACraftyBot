@@ -14,14 +14,14 @@ def message_handler(event):
 
     page.send(recipient_id,
               "How may I help you today?",
-              quick_replies=quick_replies,
+              quick_replies=craftybot,
               metadata="DEVELOPER_DEFINED_METADATA")
 
 
 @page.handle_postback('new_project')
 def new_project():
 
-    page.send(reciept_id, "Great. Please upload your first photo to start a new project",)
+    page.send(reciept_id, "Great. Please upload your first photo to start a new project",metadata="Whatever I want returned")
 
 
 @page.handle_postback()
