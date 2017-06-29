@@ -16,10 +16,10 @@ class User(db.Model):
 
     __tablename__ = "user"
 
-    user_id = db.Column(db.Integer, autoincrement=True, primary_key=True)
-    email = db.Column(db.Text, nullable=False)
-    password = db.Column(db.String(64), nullable=False)
-    name = db.Column(db.Text, nullable=False)
+    user_id = db.Column(db.Integer, primary_key=True)
+    email = db.Column(db.Text, nullable=True)
+    password = db.Column(db.String(64), nullable=True)
+    name = db.Column(db.Text, nullable=True)
     #facebook = db.Column(db.Text, nullable = False)
 
     def __repr__(self):
@@ -34,13 +34,11 @@ class Project(db.Model):
     __tablename__ = "project"
 
     project_id = db.Column(db.Integer, autoincrement=True, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.user_id'))
-    proj_plan_id = db.Column(db.Integer, db.ForeignKey('proj_plan.proj_plan_id'))
-    proj_stat_id = db.Column(db.Integer, db.ForeignKey('proj_stat.proj_stat_id'))
+    user_id = db.Column(db.Integer,) #db.ForeignKey('users.user_id'))
     name = db.Column(db.Text, nullable=True)
     notes = db.Column(db.Text, nullable=True)
-    created_at = db.Column(db.DateTime, nullable=False)
-    due_at = db.Column(db.DateTime, nullable=False)
+    created_at = db.Column(db.DateTime, nullable=True)
+    due_at = db.Column(db.DateTime, nullable=True)
     updated_at = db.Column(db.DateTime, nullable=True)
 
     def __repr__(self):
@@ -55,10 +53,12 @@ class Proj_Stat(db.Model):
     __tablename__ = "proj_stat"
 
     proj_stat_id = db.Column(db.Integer, autoincrement=True, primary_key=True)
-    status_id = db.Column(db.Integer, db.ForeignKey('status.status_id'))
-    project_id = db.Column(db.Integer, db.ForeignKey('projecr.project_id'))
-    url = db.Column(db.Text, nullable=False)
+    status_id = db.Column(db.Integer,)  #db.ForeignKey('status.status_id')
+    project_id = db.Column(db.Integer,) #db.ForeignKey('projecr.project_id'))
+    url = db.Column(db.Text, nullable=True)
     notes = db.Column(db.Text, nullable=True)
+
+    #project = db.relationship("Project", backref="proj_stat")
 
     def __repr__(self):
         """Provide helpful representation when printing."""
@@ -86,8 +86,8 @@ class Proj_Plan(db.Model):
     __tablename__ = "proj_plan"
 
     proj_plan_id = db.Column(db.Integer, autoincrement=True, primary_key=True)
-    plan_id = db.Column(db.Integer, db.ForeignKey('plan.plan_id'))
-    project_id = db.Column(db.Integer, db.ForeignKey('projecr.project_id'))
+    plan_id = db.Column(db.Integer,) # db.ForeignKey('plan.plan_id'))
+    project_id = db.Column(db.Integer,)  # db.ForeignKey('project.project_id'))
 
     def __repr__(self):
         """Provide helpful representation when printing."""
@@ -111,6 +111,7 @@ class Plan(db.Model):
 
         return "<Plan plan_id={} name={} url={}>" .format(self.plan_id, self.name, self.url)
 
+
 ##############################################################################
 # Helper functions
 
@@ -123,12 +124,12 @@ def connect_to_db(app):
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     db.app = app
     db.init_app(app)
-
+    db.create_all()
 
 if __name__ == "__main__":
     # As a convenience, if we run this module interactively, it will leave
     # you in a state of being able to work with the database directly.
 
-    from server import app
+    from Facebook_test import app
     connect_to_db(app)
     print "Connected to DB."
