@@ -1,41 +1,24 @@
-"""Movie Ratings."""
-
+"""CraftyBot."""
+import os
 from jinja2 import StrictUndefined
 from flask import Flask, jsonify, render_template, redirect, request, flash, session
 from fbmq import Page, Attachment, Template, QuickReply, NotificationType
 
-from model import connect_to_db, db
-
+from lib.model import User, Project, Proj_Stat, Status, Pattern, Image, Fabric, connect_to_db, db
+from lib.utilities import extract_data
 
 app = Flask(__name__)
-page = Page()
+page = Page(os.environ['FACEBOOK_TOKEN'])
 # Required to use Flask sessions and the debug toolbar
 app.secret_key = ""
 
-# Normally, if you use an undefined variable in Jinja2, it fails
-# silently. This is horrible. Fix this so that, instead, it raises an
-# error.
 app.jinja_env.undefined = StrictUndefined
 
 ##############################################################################
 # WIP
 
 user_state = {}
-
 state = ['NEW_PROJECT', 'project_name', 'add_first_photo', 'add_type', 'yes_no', 'add_second_photo', 'due date', 'note', ]
-
-
-def extract_data(event):
-    sender_id = event.sender_id
-    time_of_message = event.timestamp
-    message = event.message
-    message_text = message.get("text")
-    message_attachments = message.get("attachments")
-    quick_reply = message.get("quick_reply")
-    #payload = quick_reply.get('payload')
-
-    return sender_id, message, message_text, message_attachments, quick_reply
-
 
 @app.route('/webhook', methods=['POST', 'GET'])
 def webhook():
@@ -49,39 +32,8 @@ def webhook():
 
 @page.handle_message
 def received_message(event):
-
-    sender_id, message, message_text, message_attachments, quick_reply, = extract_data(event)
-
-    if message_text and "craftybot" in message_text.lower():
-
-        craftybot = [QuickReply(title="New Project", payload="NEW_PROJECT"), QuickReply(title="Update Status", payload="UPDATE_STATUS")]
-        new_user = User.query.filter(user_id=sender_id).all
-        if not new_user:
-            user = User(user_id=sender_id)
-            db.sesssion.add(user)
-            db.sesssion.commit()
-        page.send(sender_id, "How may I help you today?", quick_replies=craftybot, metadata='now it is a string')
-
-    elif message_text and user_state.get(sender_id) == state[0]:
-        user_state[sender_id] = state[1]
-
-        page.send(sender_id, "Please upload your first photo to start a new project", metadata="IMAGE_ONE")
-
-    elif message_text and user_state.get(sender_id) == state[5]:
-        user_state[sender_id] = state[6]
-        note_no = [QuickReply(title="Note", payload="NOTE"), QuickReply(title="No Notes", payload="NO_NOTE")]
-        page.send(sender_id, "Got it. Anything else you want me to know about this project", metadata="Due_Date")
-
-    elif message_attachments and user_state.get(sender_id) == state[1]:
-        image_id = 1  # add to db
-        user_state[sender_id] = state[2]
-        image_type = [QuickReply(title="Fabric", payload="FABRIC"), QuickReply(title="Pattern", payload="PATTERN")]
-        page.send(sender_id, "What is this an image of?", quick_replies=image_type, metadata="message_attachments")
-
-    elif message_attachments and user_state.get(sender_id) == state[4]:
-        user_state[sender_id] = state[5]
-        page.send(sender_id, "Success, How many weeks do you want to do this project?",)
-
+    from lib.message_handlers import handle_message
+    handle_message(event=event)
 
 @page.callback(['NEW_PROJECT'])
 def task_picker(payload, event):
@@ -94,20 +46,16 @@ def task_picker(payload, event):
 @page.callback(['FABRIC'])
 def callback_clicked_fabric(payload, event):
     """User selects fabric button"""
-
-    sender_id, message, message_text, message_attachments, quick_reply, = extract_data(event)
-    image_id = payload.split('__')[-1]
-    user_state[sender_id] = state[3]
-    supply = dict()  # create a new supply object with the image_url, user_id etc.
-    yes_no = [QuickReply(title="Yes", payload="YES"), QuickReply(title="No", payload="NO")]
-    page.send(sender_id, "Do you know what you want to do with the fabric?", quick_replies=yes_no, metadata="supply.id")
+    from lib.callbacks import fabric_callback_handler
+    fabric_callback_handler(event=event)
+    
 
 
 @page.callback(['PATTERN'])
 def callback_clicked_pattern(payload, event):
     """User selects pattern button"""
-
     sender_id, message, message_text, message_attachments, quick_reply, = extract_data(event)
+    user_state[sender_id] = state[3]
     yes_no = [QuickReply(title="Yes", payload="YES"), QuickReply(title="No", payload="NO")]
     page.send(sender_id, "Do you also have the fabric to make this pattern?", quick_replies=yes_no, metadata="DEVELOPER_DEFINED_METADATA")
 
@@ -133,7 +81,6 @@ def after_send(payload, response):
     """:type payload: fbmq.Payload"""
     print "complete"
 
-
 ##############################################################################
 
 
@@ -141,8 +88,11 @@ if __name__ == "__main__":
     # We have to set debug=True here, since it has to be True at the
     # point that we invoke the DebugToolbarExtension
     app.debug = True
-
     # Use the DebugToolbar
     # DebugToolbarExtension(app)
+    connect_to_db(app)
+
+    # In case tables haven't been created, create them
+    db.create_all()
 
     app.run(host="0.0.0.0")

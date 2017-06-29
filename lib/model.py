@@ -16,16 +16,13 @@ class User(db.Model):
 
     __tablename__ = "user"
 
-    user_id = db.Column(db.Integer, primary_key=True)
-    email = db.Column(db.Text, nullable=True)
-    password = db.Column(db.String(64), nullable=True)
-    name = db.Column(db.Text, nullable=True)
-    #facebook = db.Column(db.Text, nullable = False)
+    user_id = db.Column(db.BigInteger, primary_key=True)
+    created_at = db.Column(db.DateTime, nullable=True)
 
     def __repr__(self):
         """Provide helpful representation when printing."""
 
-        return "<User user_id={} email={}>" .format(self.user_id, self.email)
+        return "<User user_id={}>" .format(self.user_id,)
 
 
 class Project(db.Model):
@@ -34,12 +31,17 @@ class Project(db.Model):
     __tablename__ = "project"
 
     project_id = db.Column(db.Integer, autoincrement=True, primary_key=True)
-    user_id = db.Column(db.Integer,) #db.ForeignKey('users.user_id'))
+    user_id = db.Column(db.Integer, db.ForeignKey('user.user_id'))
+    pattern_id = db.Column(db.Integer, db.ForeignKey('pattern.pattern_id'))
+    fabric_id = db.Column(db.Integer, db.ForeignKey('fabric.fabric_id'))
     name = db.Column(db.Text, nullable=True)
     notes = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, nullable=True)
     due_at = db.Column(db.DateTime, nullable=True)
-    updated_at = db.Column(db.DateTime, nullable=True)
+
+    user = db.relationship("User", backref="project")
+    fabric = db.relationship("Fabric", backref="project")
+    pattern = db.relationship("Pattern", backref="project")
 
     def __repr__(self):
         """Provide helpful representation when printing."""
@@ -53,17 +55,15 @@ class Proj_Stat(db.Model):
     __tablename__ = "proj_stat"
 
     proj_stat_id = db.Column(db.Integer, autoincrement=True, primary_key=True)
-    status_id = db.Column(db.Integer,)  #db.ForeignKey('status.status_id')
-    project_id = db.Column(db.Integer,) #db.ForeignKey('projecr.project_id'))
-    url = db.Column(db.Text, nullable=True)
-    notes = db.Column(db.Text, nullable=True)
-
-    #project = db.relationship("Project", backref="proj_stat")
+    status_id = db.Column(db.Integer, db.ForeignKey('status.status_id'))
+    project_id = db.Column(db.Integer, db.ForeignKey('project.project_id'))
+    image_id = db.Column(db.Integer, db.ForeignKey('image.image_id'))
+    created_at = db.Column(db.DateTime, nullable=True)
 
     def __repr__(self):
         """Provide helpful representation when printing."""
 
-        return "<Proj_Stat proj_stat_id={} stats_id ={} url={}>" .format(self.project_stat_id, self. status_id, self.url)
+        return "<Proj_Stat proj_stat_id={} stats_id ={}>" .format(self.project_stat_id, self. status_id,)
 
 
 class Status(db.Model):
@@ -72,44 +72,54 @@ class Status(db.Model):
     __tablename__ = "status"
 
     status_id = db.Column(db.Integer, autoincrement=True, primary_key=True)
-    status = db.Column(db.Text, nullable=False)
+    name = db.Column(db.Text, nullable=False)
 
     def __repr__(self):
         """Provide helpful representation when printing."""
 
-        return "<Status status_id={} status={}>" .format(self.status_id, self.status)
+        return "<Status status_id={} status={}>" .format(self.status_id, self.name)
 
 
-class Proj_Plan(db.Model):
-    """The plan and project connection."""
-
-    __tablename__ = "proj_plan"
-
-    proj_plan_id = db.Column(db.Integer, autoincrement=True, primary_key=True)
-    plan_id = db.Column(db.Integer,) # db.ForeignKey('plan.plan_id'))
-    project_id = db.Column(db.Integer,)  # db.ForeignKey('project.project_id'))
-
-    def __repr__(self):
-        """Provide helpful representation when printing."""
-
-        return "<Proj_Plan project_id={} plan_id ={}>" .format(self.project_id, self. plan_id)
-
-
-class Plan(db.Model):
+class Pattern(db.Model):
     """The patterns being used for a project."""
 
-    __tablename__ = "plan"
+    __tablename__ = "pattern"
 
-    plan_id = db.Column(db.Integer, autoincrement=True, primary_key=True)
-    name = db.Column(db.Text, nullable=False)
-    category = db.Column(db.Text, nullable=False)
-    url = db.Column(db.Text, nullable=False)
-    notes = db.Column(db.Text, nullable=True)
+    pattern_id = db.Column(db.Integer, autoincrement=True, primary_key=True)
+    image_id = db.Column(db.Integer, db.ForeignKey('image.image_id'))
+    name = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, nullable=True)
 
     def __repr__(self):
         """Provide helpful representation when printing."""
 
-        return "<Plan plan_id={} name={} url={}>" .format(self.plan_id, self.name, self.url)
+        return "<Plan pattern_id={} name={}>" .format(self.pattern_id, self.name,)
+
+
+class Fabric(db.Model):
+    """The fabric being used for a project."""
+
+    __tablename__ = "fabric"
+
+    fabric_id = db.Column(db.Integer, autoincrement=True, primary_key=True)
+    image_id = db.Column(db.Integer, db.ForeignKey('image.image_id'))
+    name = db.Column(db.Text, nullable=True)
+
+
+class Image(db.Model):
+    """The images being used for a project."""
+
+    __tablename__ = "image"
+
+    image_id = db.Column(db.Integer, autoincrement=True, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.user_id'))
+    url = db.Column(db.Text, nullable=False)
+    name = db.Column(db.Text, nullable=True)
+
+    def __repr__(self):
+        """Provide helpful representation when printing."""
+
+        return "<Image image_id={} name={}>" .format(self.image_id, self.name,)
 
 
 ##############################################################################
@@ -124,7 +134,6 @@ def connect_to_db(app):
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     db.app = app
     db.init_app(app)
-    db.create_all()
 
 if __name__ == "__main__":
     # As a convenience, if we run this module interactively, it will leave
