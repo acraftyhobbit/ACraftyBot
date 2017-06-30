@@ -31,7 +31,7 @@ class Project(db.Model):
     __tablename__ = "project"
 
     project_id = db.Column(db.Integer, autoincrement=True, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.user_id'))
+    user_id = db.Column(db.BigInteger, db.ForeignKey('user.user_id'))
     pattern_id = db.Column(db.Integer, db.ForeignKey('pattern.pattern_id'))
     fabric_id = db.Column(db.Integer, db.ForeignKey('fabric.fabric_id'))
     name = db.Column(db.Text, nullable=True)
@@ -104,6 +104,7 @@ class Fabric(db.Model):
     fabric_id = db.Column(db.Integer, autoincrement=True, primary_key=True)
     image_id = db.Column(db.Integer, db.ForeignKey('image.image_id'))
     name = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, nullable=False)
 
 
 class Image(db.Model):
@@ -112,7 +113,7 @@ class Image(db.Model):
     __tablename__ = "image"
 
     image_id = db.Column(db.Integer, autoincrement=True, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.user_id'))
+    user_id = db.Column(db.BigInteger, db.ForeignKey('user.user_id'))
     url = db.Column(db.Text, nullable=False)
     name = db.Column(db.Text, nullable=True)
 

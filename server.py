@@ -19,6 +19,8 @@ app.jinja_env.undefined = StrictUndefined
 
 user_state = {}
 state = ['NEW_PROJECT', 'project_name', 'add_first_photo', 'add_type', 'yes_no', 'add_second_photo', 'due date', 'note', ]
+user = dict()
+
 
 @app.route('/webhook', methods=['POST', 'GET'])
 def webhook():
@@ -48,7 +50,6 @@ def callback_clicked_fabric(payload, event):
     """User selects fabric button"""
     from lib.callbacks import fabric_callback_handler
     fabric_callback_handler(event=event)
-    
 
 
 @page.callback(['PATTERN'])
@@ -66,6 +67,9 @@ def callback_clicked_yes(payload, event):
 
     sender_id, message, message_text, message_attachments, quick_reply, = extract_data(event)
     user_state[sender_id] = state[4]
+    project_id = user[sender_id].get('project_id')
+    update = Project.query.filter(project_id = project_id)
+    update.fabric_id = 
     page.send(sender_id, "Great. Please upload your next photo to add to the project", metadata="IMAGE_TWO")
 
 @page.callback(['NOTE'])
