@@ -36,7 +36,7 @@ class Project(db.Model):
     fabric_id = db.Column(db.Integer, db.ForeignKey('fabric.fabric_id'))
     name = db.Column(db.Text, nullable=True)
     notes = db.Column(db.Text, nullable=True)
-    created_at = db.Column(db.DateTime, nullable=True)
+    created_at = db.Column(db.DateTime)
     due_at = db.Column(db.DateTime, nullable=True)
 
     user = db.relationship("User", backref="project")
@@ -58,7 +58,7 @@ class Proj_Stat(db.Model):
     status_id = db.Column(db.Integer, db.ForeignKey('status.status_id'))
     project_id = db.Column(db.Integer, db.ForeignKey('project.project_id'))
     image_id = db.Column(db.Integer, db.ForeignKey('image.image_id'))
-    created_at = db.Column(db.DateTime, nullable=True)
+    created_at = db.Column(db.DateTime)
 
     def __repr__(self):
         """Provide helpful representation when printing."""
@@ -74,6 +74,7 @@ class Status(db.Model):
     status_id = db.Column(db.Integer, autoincrement=True, primary_key=True)
     name = db.Column(db.Text, nullable=False)
 
+
     def __repr__(self):
         """Provide helpful representation when printing."""
 
@@ -88,7 +89,7 @@ class Pattern(db.Model):
     pattern_id = db.Column(db.Integer, autoincrement=True, primary_key=True)
     image_id = db.Column(db.Integer, db.ForeignKey('image.image_id'))
     name = db.Column(db.Text, nullable=True)
-    created_at = db.Column(db.DateTime, nullable=True)
+    created_at = db.Column(db.DateTime)
 
     def __repr__(self):
         """Provide helpful representation when printing."""
@@ -104,7 +105,7 @@ class Fabric(db.Model):
     fabric_id = db.Column(db.Integer, autoincrement=True, primary_key=True)
     image_id = db.Column(db.Integer, db.ForeignKey('image.image_id'))
     name = db.Column(db.Text, nullable=True)
-    created_at = db.Column(db.DateTime, nullable=False)
+    created_at = db.Column(db.DateTime)
 
 
 class Image(db.Model):
@@ -116,6 +117,7 @@ class Image(db.Model):
     user_id = db.Column(db.BigInteger, db.ForeignKey('user.user_id'))
     url = db.Column(db.Text, nullable=False)
     name = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime)
 
     def __repr__(self):
         """Provide helpful representation when printing."""
