@@ -74,7 +74,6 @@ class Status(db.Model):
     status_id = db.Column(db.Integer, autoincrement=True, primary_key=True)
     name = db.Column(db.Text, nullable=False)
 
-
     def __repr__(self):
         """Provide helpful representation when printing."""
 

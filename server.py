@@ -1,14 +1,17 @@
 """CraftyBot."""
 import os
+import sys
 from jinja2 import StrictUndefined
 from flask import Flask, jsonify, render_template, redirect, request, flash, session
 from fbmq import Page, Attachment, Template, QuickReply, NotificationType
 
 from lib.model import User, Project, Proj_Stat, Status, Pattern, Image, Fabric, connect_to_db, db
-from lib.utilities import extract_data
+from lib.utilities import extract_data, work_inprogress
+from seed_status import create_status
 
 app = Flask(__name__)
-page = Page(os.environ['FACEBOOK_TOKEN'])
+facebook = os.environ['FACEBOOK_TOKEN']
+page = Page(facebook)
 # Required to use Flask sessions and the debug toolbar
 app.secret_key = ""
 
@@ -18,8 +21,8 @@ app.jinja_env.undefined = StrictUndefined
 # WIP
 
 user_state = {}
-state = ['NEW_PROJECT', 'project_name', 'add_first_photo', 'add_type', 'yes_no', 'add_second_photo', 'due date', 'note', ]
-cheesecake = dict()
+state = ['NEW_PROJECT', 'project_name', 'add_first_photo', 'add_type', 'yes_no', 'add_second_photo', 'due date', 'note', 'update_status', 'project_photo']
+crafter = dict()
 
 
 @app.route('/webhook', methods=['POST', 'GET'])
@@ -37,12 +40,35 @@ def received_message(event):
     from lib.message_handlers import handle_message
     handle_message(event=event)
 
+
 @page.callback(['NEW_PROJECT'])
-def task_picker(payload, event):
+def task_new_project(payload, event):
 
     sender_id, message, message_text, message_attachments, quick_reply, = extract_data(event)
     user_state[sender_id] = state[0]
-    page.send(sender_id, "Great. What would you like to call this project?", metadata="project_name")
+    page.send(sender_id, "Great. What would you like to call this project?")
+
+
+@page.callback(['UPDATE_STATUS'])
+def task_update_status(payload, event):
+
+    sender_id, message, message_text, message_attachments, quick_reply, = extract_data(event)
+    user_state[sender_id] = state[8]
+
+    in_progress = work_inprogress(sender_id=sender_id)
+    quick_replies = list()
+    for name, project_id in in_progress:
+        quick_replies.append(QuickReply(title=name, payload="project_{0}".format(project_id)))
+
+    page.send(sender_id, "Great. Which project do you want to update?", quick_replies=quick_replies)
+
+
+@page.callback(['project_(.+)'])
+def select_project_callback(payload, event):
+    sender_id, message, message_text, message_attachments, quick_reply, = extract_data(event)
+    project_id = int(payload.split('_')[-1])
+    crafter[sender_id]['project_id'] = project_id
+    page.send(sender_id, "Upload you newest project photo.")
 
 
 @page.callback(['FABRIC'])
@@ -58,13 +84,15 @@ def callback_clicked_pattern(payload, event):
     from lib.callbacks import pattern_callback_handler
     pattern_callback_handler(event=event)
 
+
 @page.callback(['YES'])
 def callback_clicked_yes(payload, event):
     """User selects yes button"""
 
     sender_id, message, message_text, message_attachments, quick_reply, = extract_data(event)
     user_state[sender_id] = state[4]
-    page.send(sender_id, "Great. Please upload your next photo to add to the project", metadata="IMAGE_TWO")
+    page.send(sender_id, "Great. Please upload your next photo to add to the project")
+
 
 @page.callback(['NOTE'])
 def callback_clicked_note(payload, event):
@@ -72,7 +100,8 @@ def callback_clicked_note(payload, event):
 
     sender_id, message, message_text, message_attachments, quick_reply, = extract_data(event)
     user_state[sender_id] = state[7]
-    page.send(sender_id, "Please tell me the notes about this project", metadata="notes")
+    page.send(sender_id, "Please tell me the notes about this project")
+
 
 @page.after_send
 def after_send(payload, response):
@@ -92,5 +121,8 @@ if __name__ == "__main__":
 
     # In case tables haven't been created, create them
     db.create_all()
+    status = Status.query.all()
+    if not status:
+        create_status()
 
     app.run(host="0.0.0.0")
