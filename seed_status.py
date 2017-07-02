@@ -1,6 +1,7 @@
 #status table
 from lib.model import Status, db
 
+
 def create_status():
     """Creates Status Table Rows"""
     status_1 = Status(name="Cut Out pattern pieces from fabric",)
@@ -16,6 +17,3 @@ def create_status():
     db.session.add(status_5)
     db.session.add(status_6)
     db.session.commit()
-
-
- # INSERT INTO status (name) VALUES ('Cut Out pattern pieces from fabric'), ('25% Complete'), ('50% Complete'), ('75% Complete'), ('Finishing Touches'), ('Completed Project');

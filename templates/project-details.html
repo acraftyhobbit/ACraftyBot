@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+{% block content %}
+<style>
+  .image {
+    border: 1px solid #ddd;
+    border-radius: 4px;  
+    padding: 5px; 
+    width: 150px; 
+    height: 150px; 
+  }
+</style>
+
+    <h2>{{ project.name }}'s Information</h2>
+    <ul style="list-style: none;">
+      <li>Fabric: <br><img class='image' src={{ project.fabric.image.url }}></li>
+      <li>Pattern: <br><img class='image' src={{ project.pattern.image.url }}></li>
+      {% for stat in project.proj_stat %}
+        <li><img class=>{{stat.status.name}}:<br><img class='image' src= {{stat.image.url}}></li>
+      {% endfor %}
+     </ul>
+{% endblock %}

@@ -60,6 +60,10 @@ class Proj_Stat(db.Model):
     image_id = db.Column(db.Integer, db.ForeignKey('image.image_id'))
     created_at = db.Column(db.DateTime)
 
+    image = db.relationship("Image", backref="proj_stat")
+    project = db.relationship("Project", backref="proj_stat")
+    status = db.relationship("Status", backref="proj_stat")
+
     def __repr__(self):
         """Provide helpful representation when printing."""
 
@@ -90,6 +94,8 @@ class Pattern(db.Model):
     name = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime)
 
+    image = db.relationship("Image", backref="pattern")
+
     def __repr__(self):
         """Provide helpful representation when printing."""
 
@@ -106,6 +112,7 @@ class Fabric(db.Model):
     name = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime)
 
+    image = db.relationship("Image", backref="fabric")
 
 class Image(db.Model):
     """The images being used for a project."""

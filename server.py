@@ -103,6 +103,31 @@ def callback_clicked_note(payload, event):
     page.send(sender_id, "Please tell me the notes about this project")
 
 
+@app.route("/projects")
+def all_projects():
+    """Show list of projects."""
+    project_dicts = list()
+    projects = Project.query.order_by(Project.project_id).all()
+    for project in projects:
+        project_dict = dict(
+            project_id=project.project_id,
+            name=project.name,
+            fabric_image=project.fabric.image.url,
+            pattern_image=project.pattern.image.url,
+            status_images=[stat.image.url for stat in project.proj_stat]
+            )
+        project_dicts.append(project_dict)
+    return render_template("projects.html", projects=project_dicts)
+
+
+@app.route("/projects/<project_id>")
+def project_details(project_id):
+    """Show project details."""
+
+    project = Project.query.filter_by(project_id=project_id).one()
+    return render_template("project-details.html", project=project)
+
+
 @page.after_send
 def after_send(payload, response):
     """:type payload: fbmq.Payload"""

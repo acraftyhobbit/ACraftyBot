@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% block content %}
+<style>
+  .image {
+    border: 1px solid #ddd;
+    border-radius: 4px;  
+    padding: 5px; 
+    width: 150px; 
+    height: 150px; 
+  }
+  .title{
+    font-size: 25px;
+  }
+</style>
+
+    <h1>All Projects</h1>
+    <ul style="list-style: none;">
+      {% for project in projects %}
+          <li>
+              <a class = 'title' href="/project/{{ project['project_id'] }}">
+               {{ project['name']}} 
+              </a><br>
+              <img class= 'image'src={{ project['fabric_image'] }}> <img class='image' src={{ project['pattern_image'] }}>
+            {% for image in range(6) %}
+              <img class ='image' src= {{ project['status_images'][image] | default("static/images/grey_box.jpg") }}>
+              {% endfor %} 
+          
+         </li>
+  
+    {% endfor %}
+    </ul>
+
+{% endblock %}
