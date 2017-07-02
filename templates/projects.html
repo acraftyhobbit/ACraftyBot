@@ -17,7 +17,7 @@
     <ul style="list-style: none;">
       {% for project in projects %}
           <li>
-              <a class = 'title' href="/project/{{ project['project_id'] }}">
+              <a class = 'title' href="/projects/{{ project['project_id'] }}">
                {{ project['name']}} 
               </a><br>
               <img class= 'image'src={{ project['fabric_image'] }}> <img class='image' src={{ project['pattern_image'] }}>

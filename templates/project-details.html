@@ -10,7 +10,9 @@
   }
 </style>
 
-    <h2>{{ project.name }}'s Information</h2>
+    <h2>{{ project.name }}'s Info</h2>
+    <h3> Your project is due: {{ due_at }}</h3>
+
     <ul style="list-style: none;">
       <li>Fabric: <br><img class='image' src={{ project.fabric.image.url }}></li>
       <li>Pattern: <br><img class='image' src={{ project.pattern.image.url }}></li>

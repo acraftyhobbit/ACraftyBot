@@ -8,6 +8,7 @@ from fbmq import Page, Attachment, Template, QuickReply, NotificationType
 from lib.model import User, Project, Proj_Stat, Status, Pattern, Image, Fabric, connect_to_db, db
 from lib.utilities import extract_data, work_inprogress
 from seed_status import create_status
+from datetime import datetime
 
 app = Flask(__name__)
 facebook = os.environ['FACEBOOK_TOKEN']
@@ -125,7 +126,8 @@ def project_details(project_id):
     """Show project details."""
 
     project = Project.query.filter_by(project_id=project_id).one()
-    return render_template("project-details.html", project=project)
+    due_at = datetime.strftime(project.due_at, "%A, %B %d, %Y")
+    return render_template("project-details.html", project=project, due_at=due_at)
 
 
 @page.after_send
