@@ -22,11 +22,11 @@ def total_inprogress(sender_id):
     total_inprogress = project_count[0][0] - complete[0][0]
     print(total_inprogress)
     if total_inprogress >= 6:
-        craftybot = [QuickReply(title="Update Status", payload="UPDATE_STATUS")]
-        page.send(sender_id, "You have reach max for projects. You need to finish something before you can another new project.", quick_replies=craftybot, metadata='now it is a string')
+        craftybot = [QuickReply(title="Update Status", payload="UPDATE_STATUS"), QuickReply(title="Add Stock", payload="NEW_STOCK")]
+        page.send(sender_id, "You have reach max for projects. You need to finish something before you can add another new project.", quick_replies=craftybot)
     else:
-        craftybot = [QuickReply(title="New Project", payload="NEW_PROJECT"), QuickReply(title="Update Status", payload="UPDATE_STATUS")]
-        page.send(sender_id, "How may I help you today?", quick_replies=craftybot, metadata='now it is a string')
+        craftybot = [QuickReply(title="New Project", payload="NEW_PROJECT"), QuickReply(title="Update Status", payload="UPDATE_STATUS"), QuickReply(title="Add Stock", payload="NEW_STOCK")]
+        page.send(sender_id, "How may I help you today?", quick_replies=craftybot)
 
 
 def work_inprogress(sender_id):

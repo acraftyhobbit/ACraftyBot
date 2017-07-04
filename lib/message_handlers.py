@@ -32,7 +32,7 @@ def handle_message(event):
             page.send(sender_id, "Got it. Anything else you want me to know about this project", quick_replies=note_no, metadata="Due_Date")
 
     elif message_text and user_state.get(sender_id) == state[7]:
-        user_state[sender_id] = state[0]
+        user_state[sender_id] = None
         project_id = crafter[sender_id].get('project_id')
         project = Project.query.filter(Project.project_id == project_id).first()
         project.notes = message_text

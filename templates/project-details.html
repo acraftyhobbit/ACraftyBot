@@ -11,8 +11,9 @@
 </style>
 
     <h2>{{ project.name }}'s Info</h2>
-    <h3> Your project is due: {{ due_at }}</h3>
-
+    <h3 id="countdown"></h3><br>
+    <h5> Project Notes:</h5>
+    <p>{{ project.notes }}</p>
     <ul style="list-style: none;">
       <li>Fabric: <br><img class='image' src={{ project.fabric.image.url }}></li>
       <li>Pattern: <br><img class='image' src={{ project.pattern.image.url }}></li>
@@ -20,4 +21,38 @@
         <li><img class=>{{stat.status.name}}:<br><img class='image' src= {{stat.image.url}}></li>
       {% endfor %}
      </ul>
+
+
+
+<script>
+// Set the date we're counting down to
+var countDownDate = new Date("{{ project.due_at }}").getTime();
+
+// Update the count down every 1 second
+var x = setInterval(function() {
+
+    // Get todays date and time
+    var now = new Date().getTime();
+    
+    // Find the distance between now an the count down date
+    var distance = countDownDate - now;
+    
+    // Time calculations for days, hours, minutes and seconds
+    var days = Math.floor(distance / (1000 * 60 * 60 * 24));
+    var hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    var minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+    var seconds = Math.floor((distance % (1000 * 60)) / 1000);
+    
+    // Output the result
+    document.getElementById("countdown").innerHTML = days + "days " + hours + "hours "
+    + minutes + "minutes " + seconds + "seconds ";
+    
+    // If the count down is over, write some text 
+    if (distance < 0) {
+        clearInterval(x);
+        document.getElementById("countdown").innerHTML = "EXPIRED";
+    }
+}, 1000);
+</script>     
 {% endblock %}
+

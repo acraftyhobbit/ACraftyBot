@@ -19,7 +19,7 @@ app.secret_key = ""
 app.jinja_env.undefined = StrictUndefined
 
 ##############################################################################
-# WIP
+
 
 user_state = {}
 state = ['NEW_PROJECT', 'project_name', 'add_first_photo', 'add_type', 'yes_no', 'add_second_photo', 'due date', 'note', 'update_status', 'project_photo']
@@ -64,6 +64,27 @@ def task_update_status(payload, event):
     page.send(sender_id, "Great. Which project do you want to update?", quick_replies=quick_replies)
 
 
+@page.callback(['NEW_STOCK'])
+def task_new_project(payload, event):
+
+    sender_id, message, message_text, message_attachments, quick_reply, = extract_data(event)
+    user_state[sender_id] = state[0]
+    stock_type = [QuickReply(title="Fabric Stock", payload="FABRIC_STOCK"), QuickReply(title="Pattern Stock", payload="PATTERN_STOCK")]
+    page.send(sender_id, "Great. Which stock do you want to update?", quick_replies=stock_type)
+
+
+@page.callback(['FABRIC_STOCK'])
+def callback_clicked_fabric(payload, event):
+    """User selects fabric button"""
+    sender_id, message, message_text, message_attachments, quick_reply, = extract_data(event)
+
+
+@page.callback(['PATTERN_STOCK'])
+def callback_clicked_fabric(payload, event):
+    """User selects fabric button"""
+    sender_id, message, message_text, message_attachments, quick_reply, = extract_data(event)
+
+
 @page.callback(['project_(.+)'])
 def select_project_callback(payload, event):
     sender_id, message, message_text, message_attachments, quick_reply, = extract_data(event)
@@ -97,11 +118,20 @@ def callback_clicked_yes(payload, event):
 
 @page.callback(['NOTE'])
 def callback_clicked_note(payload, event):
-    """User selects nopte button"""
+    """User selects note button"""
 
     sender_id, message, message_text, message_attachments, quick_reply, = extract_data(event)
     user_state[sender_id] = state[7]
     page.send(sender_id, "Please tell me the notes about this project")
+
+
+@page.callback(['NO_NOTES'])
+def callback_clicked_no_note(payload, event):
+    """User selects no note button"""
+
+    sender_id, message, message_text, message_attachments, quick_reply, = extract_data(event)
+    user_state[sender_id] = None
+    page.send(sender_id, "Your project has been saved. If you would like to get back to main menu type 'craftybot' again.")
 
 
 @app.route("/projects")
