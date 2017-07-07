@@ -6,7 +6,7 @@ from flask import Flask, jsonify, render_template, redirect, request, flash, ses
 from fbmq import Page, Attachment, Template, QuickReply, NotificationType
 
 from lib.model import User, Project, Proj_Stat, Status, Pattern, Image, Fabric, connect_to_db, db
-from lib.utilities import extract_data, work_inprogress
+# from lib.utilities import work_inprogress, add_stock_to_project, add_next_stock_response
 from seed_status import create_status
 from datetime import datetime
 
@@ -19,8 +19,6 @@ app.secret_key = ""
 app.jinja_env.undefined = StrictUndefined
 
 ##############################################################################
-
-
 
 crafter = dict()
 
@@ -43,15 +41,15 @@ def received_message(event):
 
 @page.callback(['NEW_PROJECT'])
 def task_new_project(payload, event):
-
+    from lib.utilities import extract_data
     sender_id, message, message_text, message_attachments, quick_reply, = extract_data(event)
-    user_state[sender_id]['current_route'] = 'new_project'
+    crafter[sender_id]['current_route'] = 'new_project'
     page.send(sender_id, "Great. What would you like to call this project?")
 
 
 @page.callback(['UPDATE_STATUS'])
 def task_update_status(payload, event):
-
+    from lib.utilities import extract_data, work_inprogress
     sender_id, message, message_text, message_attachments, quick_reply, = extract_data(event)
     crafter[sender_id]['current_route'] = 'update_status'
 
@@ -63,9 +61,9 @@ def task_update_status(payload, event):
     page.send(sender_id, "Great. Which project do you want to update?", quick_replies=quick_replies)
 
 
-@page.callback(['NEW_STOCK'])
+@page.callback(['STOCK'])
 def task_new_stock(payload, event):
-
+    from lib.utilities import extract_data
     sender_id, message, message_text, message_attachments, quick_reply, = extract_data(event)
     crafter[sender_id]['current_route'] = 'add_stock'
 
@@ -76,6 +74,7 @@ def task_new_stock(payload, event):
 @page.callback(['(.+)_STOCK'])
 def callback_clicked_fabric_stock(payload, event):
     """User selects fabric button"""
+    from lib.utilities import extract_data
     sender_id, message, message_text, message_attachments, quick_reply, = extract_data(event)
     crafter[sender_id]['stock_type'] = payload.split('_')[0].lower()
     page.send(sender_id, "Upload your photo of the {0} you want to add to stock.".format(crafter[sender_id]['stock_type']))
@@ -83,6 +82,7 @@ def callback_clicked_fabric_stock(payload, event):
 
 @page.callback(['project_(.+)'])
 def select_project_callback(payload, event):
+    from lib.utilities import extract_data
     sender_id, message, message_text, message_attachments, quick_reply, = extract_data(event)
     project_id = int(payload.split('_')[-1])
     crafter[sender_id]['project_id'] = project_id
@@ -92,23 +92,24 @@ def select_project_callback(payload, event):
 @page.callback(['YES'])
 def callback_clicked_yes(payload, event):
     """User selects yes button"""
-
+    from lib.utilities import extract_data
     sender_id, message, message_text, message_attachments, quick_reply, = extract_data(event)
     page.send(sender_id, "Great. Please upload your next photo to add to the project")
+
 
 @page.callback(['NO'])
 def callback_clicked_no(payload, event):
     """User selects no button"""
-
+    from lib.utilities import extract_data
     sender_id, message, message_text, message_attachments, quick_reply, = extract_data(event)
-    page.send(sender_id, Template.Buttons("Do you want to use something from  your stock?",[
+    page.send(sender_id, Template.Buttons("Do you want to use something from  your stock?", [
         {'type': 'web_url', 'title': 'Open Stock Gallery', 'value': 'http://localhost:5000/{0}/fabric-gallery'.format(sender_id)}]))
 
 
 @page.callback(['NOTE'])
 def callback_clicked_note(payload, event):
     """User selects note button"""
-
+    from lib.utilities import extract_data
     sender_id, message, message_text, message_attachments, quick_reply, = extract_data(event)
     page.send(sender_id, "Please tell me the notes about this project")
 
@@ -116,13 +117,13 @@ def callback_clicked_note(payload, event):
 @page.callback(['NO_NOTES'])
 def callback_clicked_no_note(payload, event):
     """User selects no note button"""
-
+    from lib.utilities import extract_data
     sender_id, message, message_text, message_attachments, quick_reply, = extract_data(event)
     page.send(sender_id, "Your project has been saved. If you would like to get back to main menu type 'craftybot' again.")
     crafter[sender_id] = dict()
 
 
-@app.route("/<user_id>/projects")
+@app.route("/projects")
 def all_projects():
     """Show list of projects."""
     project_dicts = list()
@@ -164,18 +165,18 @@ def pattern_stock_gallery():
     return render_template("pattern-gallery.html", patterns=patterns)
 
 
-@app.route("/add-to-favorites", methods=["POST"])
-def add_to_favorites():
-    stock_id = request.form.get("id")
-    stock_type = request.form.get('stock_type')
-    user_id = request.form.get("user_id")
-    project_id = session.get(user_id, dict()).get('project_id')
-    project = add_stock_to_project(stock_type=stock_type, project_id=project_id)
-    crafter[sender_id][stock_type + '_id'] = stock_id
-    add_next_stock_response(sender_id=user_id, stock_type=stock_type)
+# @app.route("/add-to-favorites", methods=["POST"])
+# def add_to_favorites():
+#     stock_id = request.form.get("id")
+#     stock_type = request.form.get('stock_type')
+#     user_id = request.form.get("user_id")
+#     project_id = session.get(user_id, dict()).get('project_id')
+#     project = add_stock_to_project(stock_type=stock_type, project_id=project_id)
+#     crafter[sender_id][stock_type + '_id'] = stock_id
+#     add_next_stock_response(sender_id=user_id, stock_type=stock_type)
 
-    response = { 'status': "success", 'id': photo_id}
-    return jsonify(response)
+#     response = { 'status': "success", 'id': photo_id}
+#     return jsonify(response)
 
 
 @page.after_send

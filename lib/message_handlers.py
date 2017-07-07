@@ -1,7 +1,7 @@
-from lib.utilities import extract_data, total_inprogress
+from lib.utilities import total_inprogress, add_user, add_image, add_project, add_stock, add_stock_to_project, add_next_stock_response
 from lib.model import User, Project, Proj_Stat, Status, Pattern, Image, Fabric, connect_to_db, db
 from fbmq import Page, Attachment, Template, QuickReply, NotificationType
-from server import user_state, state, page, crafter
+from server import page, crafter
 from datetime import timedelta, datetime
 
 ##############################################################################
@@ -9,12 +9,13 @@ from datetime import timedelta, datetime
 
 def handle_message(event):
     """Handles message types recieved by the bot."""
+    from lib.utilities import extract_data
     sender_id, message, message_text, message_attachments, quick_reply, = extract_data(event)
 
-    if not crafter[sender_id].get('current_route'):
+    if not crafter.get(sender_id, dict()).get('current_route'):
         handle_start_route(sender_id=sender_id)
 
-    elif crafter[sender_id]['current_route'] == 'new_project' and not crafter[sender_id].get('project_id') :
+    elif crafter[sender_id]['current_route'] == 'new_project' and not crafter[sender_id].get('project_id'):
         handle_project_name(sender_id=sender_id, message_text=message_text)
 
     elif crafter[sender_id]['current_route'] == 'new_project' and crafter[sender_id].get('fabric_id') and not crafter[sender_id].get('due_date'):
@@ -46,14 +47,13 @@ def handle_start_route(sender_id):
     user = add_user(sender_id=sender_id)
     crafter[sender_id] = {}
     total_inprogress(sender_id=sender_id)
-
-    if total_inprogress >= 6:
-        craftybot = [QuickReply(title="Update Status", payload="UPDATE_STATUS"), QuickReply(title="Add Stock", payload="NEW_STOCK")]
+    if total_inprogress(sender_id=sender_id) >= 6:
+        craftybot = [QuickReply(title="Update Status", payload="UPDATE_STATUS"), QuickReply(title="Add Stock", payload="STOCK")]
         page.send(sender_id, "You have reach max for projects. You need to finish something before you can add another new project.", quick_replies=craftybot)
     else:
-        craftybot = [QuickReply(title="New Project", payload="NEW_PROJECT"), QuickReply(title="Add Stock", payload="NEW_STOCK")]
-
-        if total_inprogress !=0:
+        craftybot = [QuickReply(title="New Project", payload="NEW_PROJECT"), QuickReply(title="Add Stock", payload="STOCK")]
+        page.send(sender_id, "How may I help you today?", quick_replies=craftybot)
+        if total_inprogress(sender_id=sender_id) != 0:
             craftybot.append(QuickReply(title="Update Status", payload="UPDATE_STATUS"), )
         page.send(sender_id, "How may I help you today?", quick_replies=craftybot)
 
@@ -63,14 +63,14 @@ def handle_project_name(sender_id, message_text):
     if message_text:
         project = add_project(sender_id=sender_id, name=message_text.strip())
         crafter[sender_id]['project_id'] = project.project_id
-        page.send(sender_id, Template.Buttons("Please upload your pattern photo to start a new project or click to open stock gallery.",[
+        page.send(sender_id, Template.Buttons("Please upload your pattern photo to start a new project or click to open stock gallery.", [
             {'type': 'web_url', 'title': 'Open Stock Gallery', 'value': 'http://localhost:5000/pattern-gallery'}]))
     else:
         page.send('please add a project name')
 
+
 def handle_stock_image(sender_id, image_url, stock_type):
     """Handles message attachment for user's pattern photo."""
-    sender_id, message, message_text, message_attachments, quick_reply, = extract_data(event)
     image = add_image(sender_id=sender_id, image_url=image_url)
     stock = add_stock(image=image, stock_type=stock_type)
     project_id = crafter[sender_id].get('project_id')
@@ -81,6 +81,7 @@ def handle_stock_image(sender_id, image_url, stock_type):
 
     else:
         page.send(sender_id, "This image has been add to your {0} stock photos.To update another project say 'craftybot'".format(stock_type))
+        crafter[sender_id] = dict()
 
 
 def handle_due_date(sender_id, message_text):
@@ -108,6 +109,7 @@ def handle_project_notes(sender_id, message_text):
 
 def handle_status_image(event):
     """Handles message attachment for user's 1st photo."""
+    from lib.utilities import extract_data
     sender_id, message, message_text, message_attachments, quick_reply, = extract_data(event)
     user_state[sender_id] = None
     update_image = Image(user_id=sender_id, url=message_attachments[0].get('payload').get('url'), created_at='now')
@@ -121,5 +123,5 @@ def handle_status_image(event):
     project = Project.query.filter(Project.project_id == project_id).first()
     status = Status.query.filter(Status.status_id == update_stat.status_id).first()
     due_date = datetime.strftime(project.due_at, "%A, %B %d, %Y")
-
+    crafter[sender_id] = dict()
     page.send(sender_id, "YAY! You're {status}. Reminder your due date is {due_date}. To update another project say 'craftybot'".format(status=status.name, due_date=due_date))
