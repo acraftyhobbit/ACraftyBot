@@ -20,13 +20,7 @@ def total_inprogress(sender_id):
     project_count = db.session.query(db.func.count(Project.project_id)).filter(Project.user_id == sender_id).all()
 
     total_inprogress = project_count[0][0] - complete[0][0]
-    
-    if total_inprogress >= 6:
-        craftybot = [QuickReply(title="Update Status", payload="UPDATE_STATUS"), QuickReply(title="Add Stock", payload="NEW_STOCK")]
-        page.send(sender_id, "You have reach max for projects. You need to finish something before you can add another new project.", quick_replies=craftybot)
-    else:
-        craftybot = [QuickReply(title="New Project", payload="NEW_PROJECT"), QuickReply(title="Update Status", payload="UPDATE_STATUS"), QuickReply(title="Add Stock", payload="NEW_STOCK")]
-        page.send(sender_id, "How may I help you today?", quick_replies=craftybot)
+    return total_inprogress
 
 
 def work_inprogress(sender_id):
@@ -41,3 +35,64 @@ def work_inprogress(sender_id):
     else:
         inprogress = db.session.query(Project.name, Project.project_id).filter(db.not_(Project.project_id.in_(complete))) & (Project.user_id == sender_id).all()
     return inprogress
+
+def add_image(sender_id, image_url):
+    image = Image(user_id=sender_id, url=image_url, created_at='now')
+    db.session.add(image)
+    db.session.commit()
+    return image
+
+
+def add_stock(stock_type, image):
+    if stock_type == 'fabric':
+        stock = Fabric(image_id=image.image_id, name="fabric", created_at='now')
+    else:
+        stock = Pattern(image_id=image.image_id, name="pattern", created_at='now')
+    db.session.add(stock)
+    db.session.commit()
+    return stock
+
+
+def add_stock_to_project(project_id, stock):
+    project = Project.query.filter(Project.project_id == project_id).first()
+    if isinstance(stock, Fabric):
+        project.fabric_id = stock.fabric_id
+    else:
+        project.pattern_id = stock.pattern_id
+    db.session.commit()
+    return project
+
+
+def add_project(sender_id, name):
+    new_project = Project(user_id=sender_id, name=name, created_at='now')
+    db.session.add(new_project)
+    db.session.commit()
+    return project
+
+
+def update_project_due_date(project_id, weeks):
+    project = Project.query.filter(Project.project_id == project_id).first()
+    project.due_at = project.created_at + timedelta(weeks=weeks)
+    db.session.commit()
+    return project
+
+def update_project_notes(project_id, message_text):
+    project = Project.query.filter(Project.project_id == project_id).first()
+    project.notes = message_text
+    db.session.commit()
+    return project
+
+def add_user(sender_id):
+    user = User.query.filter(User.user_id == sender_id).first()
+    if not user:
+        user = User(user_id=sender_id)
+        db.session.add(user)
+        db.session.commit()
+    return user
+
+def add_next_stock_response(sender_id, stock_type):
+    if stock_type == 'pattern':
+        yes_no = [QuickReply(title="Yes", payload="YES"), QuickReply(title="No", payload="NO")]
+        page.send(sender_id, "Got it! Do you have the fabric you want to make this pattern with?", quick_replies=yes_no)
+    else:
+        page.send(sender_id, "Success, How many weeks do you want to do this project?")

@@ -21,8 +21,7 @@ app.jinja_env.undefined = StrictUndefined
 ##############################################################################
 
 
-user_state = {}
-state = ['NEW_PROJECT', 'project_name', 'add_first_photo', 'add_type', 'yes_no', 'add_second_photo', 'due date', 'note', 'update_status', 'project_photo', 'update_stock', 'fabric_stock', 'pattern_stock']
+
 crafter = dict()
 
 
@@ -46,7 +45,7 @@ def received_message(event):
 def task_new_project(payload, event):
 
     sender_id, message, message_text, message_attachments, quick_reply, = extract_data(event)
-    user_state[sender_id] = state[0]
+    user_state[sender_id]['current_route'] = 'new_project'
     page.send(sender_id, "Great. What would you like to call this project?")
 
 
@@ -54,7 +53,7 @@ def task_new_project(payload, event):
 def task_update_status(payload, event):
 
     sender_id, message, message_text, message_attachments, quick_reply, = extract_data(event)
-    user_state[sender_id] = state[8]
+    crafter[sender_id]['current_route'] = 'update_status'
 
     in_progress = work_inprogress(sender_id=sender_id)
     quick_replies = list()
@@ -68,25 +67,18 @@ def task_update_status(payload, event):
 def task_new_stock(payload, event):
 
     sender_id, message, message_text, message_attachments, quick_reply, = extract_data(event)
-    user_state[sender_id] = state[10]
+    crafter[sender_id]['current_route'] = 'add_stock'
+
     stock_type = [QuickReply(title="Fabric Stock", payload="FABRIC_STOCK"), QuickReply(title="Pattern Stock", payload="PATTERN_STOCK")]
     page.send(sender_id, "Great. Which stock do you want to update?", quick_replies=stock_type)
 
 
-@page.callback(['FABRIC_STOCK'])
+@page.callback(['(.+)_STOCK'])
 def callback_clicked_fabric_stock(payload, event):
     """User selects fabric button"""
     sender_id, message, message_text, message_attachments, quick_reply, = extract_data(event)
-    user_state[sender_id] = state[11]
-    page.send(sender_id, "Upload your photo of the fabric you want to add to stock.")
-
-
-@page.callback(['PATTERN_STOCK'])
-def callback_clicked_pattern_stock(payload, event):
-    """User selects fabric button"""
-    sender_id, message, message_text, message_attachments, quick_reply, = extract_data(event)
-    user_state[sender_id] = state[12]
-    page.send(sender_id, "Upload your photo of the pattern you want to add to stock.")
+    crafter[sender_id]['stock_type'] = payload.split('_')[0].lower()
+    page.send(sender_id, "Upload your photo of the {0} you want to add to stock.".format(crafter[sender_id]['stock_type']))
 
 
 @page.callback(['project_(.+)'])
@@ -97,26 +89,11 @@ def select_project_callback(payload, event):
     page.send(sender_id, "Upload you newest project photo.")
 
 
-@page.callback(['FABRIC'])
-def callback_clicked_fabric(payload, event):
-    """User selects fabric button"""
-    from lib.callbacks import fabric_callback_handler
-    fabric_callback_handler(event=event)
-
-
-@page.callback(['PATTERN'])
-def callback_clicked_pattern(payload, event):
-    """User selects pattern button"""
-    from lib.callbacks import pattern_callback_handler
-    pattern_callback_handler(event=event)
-
-
 @page.callback(['YES'])
 def callback_clicked_yes(payload, event):
     """User selects yes button"""
 
     sender_id, message, message_text, message_attachments, quick_reply, = extract_data(event)
-    user_state[sender_id] = state[4]
     page.send(sender_id, "Great. Please upload your next photo to add to the project")
 
 @page.callback(['NO'])
@@ -124,7 +101,6 @@ def callback_clicked_no(payload, event):
     """User selects no button"""
 
     sender_id, message, message_text, message_attachments, quick_reply, = extract_data(event)
-    user_state[sender_id] = state[4]
     page.send(sender_id, Template.Buttons("Do you want to use something from  your stock?",[
         {'type': 'web_url', 'title': 'Open Stock Gallery', 'value': 'http://localhost:5000/{0}/fabric-gallery'.format(sender_id)}]))
 
@@ -134,7 +110,6 @@ def callback_clicked_note(payload, event):
     """User selects note button"""
 
     sender_id, message, message_text, message_attachments, quick_reply, = extract_data(event)
-    user_state[sender_id] = state[7]
     page.send(sender_id, "Please tell me the notes about this project")
 
 
@@ -143,8 +118,8 @@ def callback_clicked_no_note(payload, event):
     """User selects no note button"""
 
     sender_id, message, message_text, message_attachments, quick_reply, = extract_data(event)
-    user_state[sender_id] = None
     page.send(sender_id, "Your project has been saved. If you would like to get back to main menu type 'craftybot' again.")
+    crafter[sender_id] = dict()
 
 
 @app.route("/<user_id>/projects")
@@ -164,7 +139,7 @@ def all_projects():
     return render_template("projects.html", projects=project_dicts)
 
 
-@app.route("/projects/<project_id>")
+@app.route("/<user_id>/projects/<project_id>")
 def project_details(project_id):
     """Show project details."""
 
@@ -173,7 +148,7 @@ def project_details(project_id):
     return render_template("project-details.html", project=project, due_at=due_at)
 
 
-@app.route("/fabric-gallery")
+@app.route("/<user_id>/fabric-gallery")
 def fabric_stock_gallery():
     """Show all fabric images."""
     sender_id = 1397850150328689
@@ -181,7 +156,7 @@ def fabric_stock_gallery():
     return render_template("fabric_gallery.html", fabrics=fabrics)
 
 
-@app.route("/pattern-gallery")
+@app.route("/<user_id>/pattern-gallery")
 def pattern_stock_gallery():
     """Show all fabric images."""
     sender_id = 1397850150328689
@@ -195,15 +170,11 @@ def add_to_favorites():
     stock_type = request.form.get('stock_type')
     user_id = request.form.get("user_id")
     project_id = session.get(user_id, dict()).get('project_id')
-    'https://www.craftbot.com/user/1397850150328689/fabric'
+    project = add_stock_to_project(stock_type=stock_type, project_id=project_id)
+    crafter[sender_id][stock_type + '_id'] = stock_id
+    add_next_stock_response(sender_id=user_id, stock_type=stock_type)
 
-    if stock_type == 'fabric':
-        project = Project.query.filter(Project.project_id == project_id).first()
-        project.fabric_id = stock_id
-        db.session.commit()
-    # put this in a "favorites" table?
-
-    response = { 'status': "success", 'id': photo_id }
+    response = { 'status': "success", 'id': photo_id}
     return jsonify(response)
 
 
