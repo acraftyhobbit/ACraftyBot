@@ -1,6 +1,8 @@
-{% extends 'base.html' %}
-{% block content %}
-<style>
+<!doctype html>
+<html>
+<head>
+  <title>ACraftyBot Projects</title>
+  <style>
   .image {
     border: 1px solid #ddd;
     border-radius: 4px;  
@@ -12,6 +14,60 @@
     font-size: 25px;
   }
 </style>
+<link rel="stylesheet" href="http://netdna.bootstrapcdn.com/bootstrap/3.0.3/css/bootstrap.min.css">
+    <!-- Respomsive slider -->
+    <link href="../static/css/responsive-calendar.css" rel="stylesheet">
+<script src="https://unpkg.com/react@latest/dist/react.js"></script>
+<script src="https://unpkg.com/react-dom@latest/dist/react-dom.js"></script>
+<script src="https://unpkg.com/babel-standalone@6.15.0/babel.min.js"></script>
+</head>
+
+<body>
+  <body>
+    <div class="container">
+      <!-- Responsive calendar - START -->
+      <div class="responsive-calendar">
+        <div class="controls">
+            <a class="pull-left" data-go="prev"><div class="btn btn-primary">Prev</div></a>
+            <h4><span data-head-year></span> <span data-head-month></span></h4>
+            <a class="pull-right" data-go="next"><div class="btn btn-primary">Next</div></a>
+        </div><hr/>
+        <div class="day-headers">
+          <div class="day header">Mon</div>
+          <div class="day header">Tue</div>
+          <div class="day header">Wed</div>
+          <div class="day header">Thu</div>
+          <div class="day header">Fri</div>
+          <div class="day header">Sat</div>
+          <div class="day header">Sun</div>
+        </div>
+        <div class="days" data-group="days">
+          
+        </div>
+      </div>
+      <!-- Responsive calendar - END -->
+    </div>
+    <script src="../static/js/jquery.js"></script>
+    <script src="../static/js/responsive-calendar.js"></script>
+    <script type="text/javascript">
+      var currentTime = new Date()
+      var month = currentTime.getMonth() + 1
+      var year = currentTime.getFullYear()
+      $(document).ready(function () {
+        $(".responsive-calendar").responsiveCalendar({
+          time: (year + "-" + month),
+          events: {
+            "2017-07-30": {"number": 5, "url": "http://w3widgets.com/responsive-slider"},
+            "2017-07-26": {"number": 1, "url": "http://w3widgets.com"}, 
+            "2017-07-03": {"number": 1}, 
+            "2017-06-12": {}}
+        });
+      });
+    </script>
+<div id="root"></div> 
+<div id="Demo"></div> 
+
+
 
     <h1>All Projects</h1>
     <ul style="list-style: none;">
@@ -20,7 +76,7 @@
               <a class = 'title' href="/projects/{{ project['project_id'] }}">
                {{ project['name']}} 
               </a><br>
-              <img class= 'image'src={{ project['fabric_image'] }}> <img class='image' src={{ project['pattern_image'] }}>
+              <a href= "/fabric-gallery"><img class= 'image'src={{ project['fabric_image'] }}></a> <a href = "/pattern-gallery"><img class='image' src={{ project['pattern_image'] }}></a>
             {% for image in range(6) %}
               <img class ='image' src= {{ project['status_images'][image] | default("static/images/grey_box.jpg") }}>
               {% endfor %} 
@@ -30,4 +86,13 @@
     {% endfor %}
     </ul>
 
-{% endblock %}
+<script src="/static/react.js"></script>
+<script type="text/babel">
+'use strict';
+      ReactDOM.render(
+        <h1>Hello,You have a react element on your page!</h1>,
+        document.getElementById('root')
+      );</script>
+</body>
+</html>
+

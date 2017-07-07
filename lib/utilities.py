@@ -20,7 +20,7 @@ def total_inprogress(sender_id):
     project_count = db.session.query(db.func.count(Project.project_id)).filter(Project.user_id == sender_id).all()
 
     total_inprogress = project_count[0][0] - complete[0][0]
-    print(total_inprogress)
+    
     if total_inprogress >= 6:
         craftybot = [QuickReply(title="Update Status", payload="UPDATE_STATUS"), QuickReply(title="Add Stock", payload="NEW_STOCK")]
         page.send(sender_id, "You have reach max for projects. You need to finish something before you can add another new project.", quick_replies=craftybot)

@@ -28,8 +28,8 @@ def handle_message(event):
             project = Project.query.filter(Project.project_id == project_id).first()
             project.due_at = project.created_at + timedelta(weeks=weeks)
             db.session.commit()
-            note_no = [QuickReply(title="Note", payload="NOTE"), QuickReply(title="No Notes", payload="NO_NOTE")]
-            page.send(sender_id, "Got it. Anything else you want me to know about this project", quick_replies=note_no, metadata="Due_Date")
+            note_no = [QuickReply(title="Note", payload="NOTE"), QuickReply(title="No Notes", payload="NO_NOTES")]
+            page.send(sender_id, "Got it. Anything else you want me to know about this project", quick_replies=note_no)
 
     elif message_text and user_state.get(sender_id) == state[7]:
         user_state[sender_id] = None
@@ -47,6 +47,12 @@ def handle_message(event):
 
     elif message_attachments and user_state.get(sender_id) == state[8]:
         handle_image_event_3(event=event)
+
+    elif message_attachments and user_state.get(sender_id) == state[11]:
+        handle_image_event_4(event=event)
+
+    elif message_attachments and user_state.get(sender_id) == state[12]:
+        handle_image_event_5(event=event)
 
 
 ##############################################################################
@@ -72,7 +78,8 @@ def handle_text_event_2(event):
     db.session.commit()
     project_id = Project.query.filter(Project.name == message_text, Project.user_id == sender_id).first()
     crafter[sender_id]['project_id'] = project_id.project_id  # can I also pull name to make text say name
-    page.send(sender_id, "Please upload your first photo to start a new project")
+    page.send(sender_id, Template.Buttons("Please upload your first photo to start a new project or click to open stock gallery.",[
+        {'type': 'web_url', 'title': 'Open Stock Gallery', 'value': 'http://localhost:5000/fabric-gallery'}]))
 
 
 def handle_image_event_1(event):
@@ -130,3 +137,30 @@ def handle_image_event_3(event):
     due_date = datetime.strftime(project.due_at, "%A, %B %d, %Y")
 
     page.send(sender_id, "YAY! You're {status}. Reminder your due date is {due_date}. To update another project say 'craftybot'".format(status=status.name, due_date=due_date))
+
+
+def handle_image_event_4(event):
+    """Handles message attachment for user's fabric stock photo."""
+    sender_id, message, message_text, message_attachments, quick_reply, = extract_data(event)
+    user_state[sender_id] = state[2]
+    image = Image(user_id=sender_id, url=message_attachments[0].get('payload').get('url'), created_at='now')
+    db.session.add(image)
+    db.session.commit()
+    fabric = Fabric(image_id=image.image_id, name="fabric", created_at='now')
+    db.session.add(fabric)
+    db.session.commit()
+    page.send(sender_id, "This image has been add to your fabric stock photos.To update another project say 'craftybot'")
+
+
+def handle_image_event_5(event):
+    """Handles message attachment for user's pattern stock photo.To update another project say 'craftybot'"""
+
+    sender_id, message, message_text, message_attachments, quick_reply, = extract_data(event)
+    user_state[sender_id] = state[2]
+    image = Image(user_id=sender_id, url=message_attachments[0].get('payload').get('url'), created_at='now')
+    db.session.add(image)
+    db.session.commit()
+    pattern = Pattern(image_id=image.image_id, name="pattern", created_at='now')
+    db.session.add(pattern)
+    db.session.commit()
+    page.send(sender_id, "This image has been add to your pattern stock photos.To update another project say 'craftybot'")

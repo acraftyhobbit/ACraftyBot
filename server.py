@@ -22,7 +22,7 @@ app.jinja_env.undefined = StrictUndefined
 
 
 user_state = {}
-state = ['NEW_PROJECT', 'project_name', 'add_first_photo', 'add_type', 'yes_no', 'add_second_photo', 'due date', 'note', 'update_status', 'project_photo']
+state = ['NEW_PROJECT', 'project_name', 'add_first_photo', 'add_type', 'yes_no', 'add_second_photo', 'due date', 'note', 'update_status', 'project_photo', 'update_stock', 'fabric_stock', 'pattern_stock']
 crafter = dict()
 
 
@@ -65,24 +65,28 @@ def task_update_status(payload, event):
 
 
 @page.callback(['NEW_STOCK'])
-def task_new_project(payload, event):
+def task_new_stock(payload, event):
 
     sender_id, message, message_text, message_attachments, quick_reply, = extract_data(event)
-    user_state[sender_id] = state[0]
+    user_state[sender_id] = state[10]
     stock_type = [QuickReply(title="Fabric Stock", payload="FABRIC_STOCK"), QuickReply(title="Pattern Stock", payload="PATTERN_STOCK")]
     page.send(sender_id, "Great. Which stock do you want to update?", quick_replies=stock_type)
 
 
 @page.callback(['FABRIC_STOCK'])
-def callback_clicked_fabric(payload, event):
+def callback_clicked_fabric_stock(payload, event):
     """User selects fabric button"""
     sender_id, message, message_text, message_attachments, quick_reply, = extract_data(event)
+    user_state[sender_id] = state[11]
+    page.send(sender_id, "Upload your photo of the fabric you want to add to stock.")
 
 
 @page.callback(['PATTERN_STOCK'])
-def callback_clicked_fabric(payload, event):
+def callback_clicked_pattern_stock(payload, event):
     """User selects fabric button"""
     sender_id, message, message_text, message_attachments, quick_reply, = extract_data(event)
+    user_state[sender_id] = state[12]
+    page.send(sender_id, "Upload your photo of the pattern you want to add to stock.")
 
 
 @page.callback(['project_(.+)'])
@@ -115,6 +119,15 @@ def callback_clicked_yes(payload, event):
     user_state[sender_id] = state[4]
     page.send(sender_id, "Great. Please upload your next photo to add to the project")
 
+@page.callback(['NO'])
+def callback_clicked_no(payload, event):
+    """User selects no button"""
+
+    sender_id, message, message_text, message_attachments, quick_reply, = extract_data(event)
+    user_state[sender_id] = state[4]
+    page.send(sender_id, Template.Buttons("Do you want to use something from  your stock?",[
+        {'type': 'web_url', 'title': 'Open Stock Gallery', 'value': 'http://localhost:5000/{0}/fabric-gallery'.format(sender_id)}]))
+
 
 @page.callback(['NOTE'])
 def callback_clicked_note(payload, event):
@@ -134,19 +147,19 @@ def callback_clicked_no_note(payload, event):
     page.send(sender_id, "Your project has been saved. If you would like to get back to main menu type 'craftybot' again.")
 
 
-@app.route("/projects")
+@app.route("/<user_id>/projects")
 def all_projects():
     """Show list of projects."""
     project_dicts = list()
-    projects = Project.query.order_by(Project.project_id).all()
+    projects = Project.query.filter(Project.fabric_id != None, Project.pattern_id != None).order_by(Project.project_id).all()
     for project in projects:
         project_dict = dict(
             project_id=project.project_id,
             name=project.name,
             fabric_image=project.fabric.image.url,
             pattern_image=project.pattern.image.url,
-            status_images=[stat.image.url for stat in project.proj_stat]
-            )
+            due_at=datetime.strftime(project.due_at, "%Y-%m-%d"),
+            status_images=[stat.image.url for stat in project.proj_stat])
         project_dicts.append(project_dict)
     return render_template("projects.html", projects=project_dicts)
 
@@ -158,6 +171,40 @@ def project_details(project_id):
     project = Project.query.filter_by(project_id=project_id).one()
     due_at = datetime.strftime(project.due_at, "%A, %B %d, %Y")
     return render_template("project-details.html", project=project, due_at=due_at)
+
+
+@app.route("/fabric-gallery")
+def fabric_stock_gallery():
+    """Show all fabric images."""
+    sender_id = 1397850150328689
+    fabrics = db.session.query(Fabric.fabric_id, Image.url).join(Image).filter(Image.user_id == sender_id).all()
+    return render_template("fabric_gallery.html", fabrics=fabrics)
+
+
+@app.route("/pattern-gallery")
+def pattern_stock_gallery():
+    """Show all fabric images."""
+    sender_id = 1397850150328689
+    patterns = db.session.query(Pattern.pattern_id, Image.url).join(Image).filter(Image.user_id == sender_id).all()
+    return render_template("pattern-gallery.html", patterns=patterns)
+
+
+@app.route("/add-to-favorites", methods=["POST"])
+def add_to_favorites():
+    stock_id = request.form.get("id")
+    stock_type = request.form.get('stock_type')
+    user_id = request.form.get("user_id")
+    project_id = session.get(user_id, dict()).get('project_id')
+    'https://www.craftbot.com/user/1397850150328689/fabric'
+
+    if stock_type == 'fabric':
+        project = Project.query.filter(Project.project_id == project_id).first()
+        project.fabric_id = stock_id
+        db.session.commit()
+    # put this in a "favorites" table?
+
+    response = { 'status': "success", 'id': photo_id }
+    return jsonify(response)
 
 
 @page.after_send

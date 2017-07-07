@@ -20,7 +20,7 @@ def fabric_callback_handler(event):
         db.session.commit()
         crafter[sender_id]['fabric_id'] = fabric.fabric_id
         yes_no = [QuickReply(title="Yes", payload="YES"), QuickReply(title="No", payload="NO")]
-        page.send(sender_id, "Do you know what you want to do with the fabric?", quick_replies=yes_no, metadata="supply.id")
+        page.send(sender_id, "Do you know what you want to do with the fabric?")
 
 
 def pattern_callback_handler(event):
