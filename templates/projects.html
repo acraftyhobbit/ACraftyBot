@@ -16,10 +16,11 @@
 </style>
 <link rel="stylesheet" href="http://netdna.bootstrapcdn.com/bootstrap/3.0.3/css/bootstrap.min.css">
     <!-- Respomsive slider -->
-    <link href="../static/css/responsive-calendar.css" rel="stylesheet">
+    <link href="../../static/css/responsive-calendar.css" rel="stylesheet">
 <script src="https://unpkg.com/react@latest/dist/react.js"></script>
 <script src="https://unpkg.com/react-dom@latest/dist/react-dom.js"></script>
 <script src="https://unpkg.com/babel-standalone@6.15.0/babel.min.js"></script>
+<script type="https://cdnjs.cloudflare.com/ajax/libs/handlebars.js/4.0.10/handlebars.js"></script>
 </head>
 
 <body>
@@ -47,20 +48,20 @@
       </div>
       <!-- Responsive calendar - END -->
     </div>
-    <script src="../static/js/jquery.js"></script>
-    <script src="../static/js/responsive-calendar.js"></script>
+    <script src="../../static/js/jquery.js"></script>
+    <script src="../../static/js/responsive-calendar.js"></script>
     <script type="text/javascript">
+    var dates = $.getJSON( "/due-at.json", function() {
+          console.log( "success" );
+        })
+    
       var currentTime = new Date()
       var month = currentTime.getMonth() + 1
       var year = currentTime.getFullYear()
       $(document).ready(function () {
         $(".responsive-calendar").responsiveCalendar({
           time: (year + "-" + month),
-          events: {
-            "2017-07-30": {"number": 5, "url": "http://w3widgets.com/responsive-slider"},
-            "2017-07-26": {"number": 1, "url": "http://w3widgets.com"}, 
-            "2017-07-03": {"number": 1}, 
-            "2017-06-12": {}}
+          events: dates
         });
       });
     </script>
@@ -73,12 +74,12 @@
     <ul style="list-style: none;">
       {% for project in projects %}
           <li>
-              <a class = 'title' href="/projects/{{ project['project_id'] }}">
+              <a class = 'title' href="/user{{ user_id }}/projects/{{ project['project_id'] }}">
                {{ project['name']}} 
               </a><br>
-              <a href= "/fabric-gallery"><img class= 'image'src={{ project['fabric_image'] }}></a> <a href = "/pattern-gallery"><img class='image' src={{ project['pattern_image'] }}></a>
+              <a href = "/user/{{ user_id }}/pattern"><img class='image' src={{ project['pattern_image'] }}></a><a href= "/user/{{ user_id }}/fabric"><img class= 'image'src={{ project['fabric_image'] }}></a>
             {% for image in range(6) %}
-              <img class ='image' src= {{ project['status_images'][image] | default("static/images/grey_box.jpg") }}>
+              <img class ='image' src= {{ project['status_images'][image] | default("../../static/images/grey_box.jpg") }}>
               {% endfor %} 
           
          </li>

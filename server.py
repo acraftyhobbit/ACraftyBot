@@ -4,12 +4,10 @@ import sys
 from jinja2 import StrictUndefined
 from flask import Flask, jsonify, render_template, redirect, request, flash, session
 from fbmq import Page, Attachment, Template, QuickReply, NotificationType
-
 from lib.model import User, Project, Proj_Stat, Status, Pattern, Image, Fabric, connect_to_db, db
-# from lib.utilities import work_inprogress, add_stock_to_project, add_next_stock_response
 from seed_status import create_status
-from datetime import datetime
-
+from datetime import datetime, timedelta
+from settings import crafter
 app = Flask(__name__)
 facebook = os.environ['FACEBOOK_TOKEN']
 page = Page(facebook)
@@ -19,8 +17,6 @@ app.secret_key = ""
 app.jinja_env.undefined = StrictUndefined
 
 ##############################################################################
-
-crafter = dict()
 
 
 @app.route('/webhook', methods=['POST', 'GET'])
@@ -43,6 +39,8 @@ def received_message(event):
 def task_new_project(payload, event):
     from lib.utilities import extract_data
     sender_id, message, message_text, message_attachments, quick_reply, = extract_data(event)
+    if sender_id not in crafter.keys():
+        crafter[sender_id] = {}
     crafter[sender_id]['current_route'] = 'new_project'
     page.send(sender_id, "Great. What would you like to call this project?")
 
@@ -51,12 +49,14 @@ def task_new_project(payload, event):
 def task_update_status(payload, event):
     from lib.utilities import extract_data, work_inprogress
     sender_id, message, message_text, message_attachments, quick_reply, = extract_data(event)
+    if sender_id not in crafter.keys():
+        crafter[sender_id] = {}
     crafter[sender_id]['current_route'] = 'update_status'
 
     in_progress = work_inprogress(sender_id=sender_id)
     quick_replies = list()
     for name, project_id in in_progress:
-        quick_replies.append(QuickReply(title=name, payload="project_{0}".format(project_id)))
+        quick_replies.append(QuickReply(title=name, payload="project_{}".format(project_id)))
 
     page.send(sender_id, "Great. Which project do you want to update?", quick_replies=quick_replies)
 
@@ -65,8 +65,9 @@ def task_update_status(payload, event):
 def task_new_stock(payload, event):
     from lib.utilities import extract_data
     sender_id, message, message_text, message_attachments, quick_reply, = extract_data(event)
+    if sender_id not in crafter.keys():
+        crafter[sender_id] = {}
     crafter[sender_id]['current_route'] = 'add_stock'
-
     stock_type = [QuickReply(title="Fabric Stock", payload="FABRIC_STOCK"), QuickReply(title="Pattern Stock", payload="PATTERN_STOCK")]
     page.send(sender_id, "Great. Which stock do you want to update?", quick_replies=stock_type)
 
@@ -76,14 +77,18 @@ def callback_clicked_fabric_stock(payload, event):
     """User selects fabric button"""
     from lib.utilities import extract_data
     sender_id, message, message_text, message_attachments, quick_reply, = extract_data(event)
+    if sender_id not in crafter.keys():
+        crafter[sender_id] = {}
     crafter[sender_id]['stock_type'] = payload.split('_')[0].lower()
-    page.send(sender_id, "Upload your photo of the {0} you want to add to stock.".format(crafter[sender_id]['stock_type']))
+    page.send(sender_id, "Upload your photo of the {} you want to add to stock.".format(crafter[sender_id]['stock_type']))
 
 
 @page.callback(['project_(.+)'])
 def select_project_callback(payload, event):
     from lib.utilities import extract_data
     sender_id, message, message_text, message_attachments, quick_reply, = extract_data(event)
+    if sender_id not in crafter.keys():
+        crafter[sender_id] = {}
     project_id = int(payload.split('_')[-1])
     crafter[sender_id]['project_id'] = project_id
     page.send(sender_id, "Upload you newest project photo.")
@@ -103,7 +108,7 @@ def callback_clicked_no(payload, event):
     from lib.utilities import extract_data
     sender_id, message, message_text, message_attachments, quick_reply, = extract_data(event)
     page.send(sender_id, Template.Buttons("Do you want to use something from  your stock?", [
-        {'type': 'web_url', 'title': 'Open Stock Gallery', 'value': 'http://localhost:5000/{0}/fabric-gallery'.format(sender_id)}]))
+        {'type': 'web_url', 'title': 'Open Stock Gallery', 'value': 'http://localhost:5000/user/{}/fabric'.format(sender_id)}]))
 
 
 @page.callback(['NOTE'])
@@ -123,8 +128,8 @@ def callback_clicked_no_note(payload, event):
     crafter[sender_id] = dict()
 
 
-@app.route("/projects")
-def all_projects():
+@app.route("/user/<user_id>/projects")
+def all_projects(user_id):
     """Show list of projects."""
     project_dicts = list()
     projects = Project.query.filter(Project.fabric_id != None, Project.pattern_id != None).order_by(Project.project_id).all()
@@ -134,14 +139,13 @@ def all_projects():
             name=project.name,
             fabric_image=project.fabric.image.url,
             pattern_image=project.pattern.image.url,
-            due_at=datetime.strftime(project.due_at, "%Y-%m-%d"),
             status_images=[stat.image.url for stat in project.proj_stat])
         project_dicts.append(project_dict)
-    return render_template("projects.html", projects=project_dicts)
+    return render_template("projects.html", projects=project_dicts, user_id=user_id)
 
 
-@app.route("/<user_id>/projects/<project_id>")
-def project_details(project_id):
+@app.route("/user/<user_id>/projects/<project_id>")
+def project_details(user_id,project_id):
     """Show project details."""
 
     project = Project.query.filter_by(project_id=project_id).one()
@@ -149,34 +153,47 @@ def project_details(project_id):
     return render_template("project-details.html", project=project, due_at=due_at)
 
 
-@app.route("/<user_id>/fabric-gallery")
-def fabric_stock_gallery():
-    """Show all fabric images."""
-    sender_id = 1397850150328689
-    fabrics = db.session.query(Fabric.fabric_id, Image.url).join(Image).filter(Image.user_id == sender_id).all()
-    return render_template("fabric_gallery.html", fabrics=fabrics)
+@app.route("/user/<user_id>/<stock_type>")
+def stock_gallery(user_id, stock_type):
+    """Show stock images."""
+    if stock_type.lower() == 'pattern':
+        stock = db.session.query(Pattern.pattern_id.label('id'), Image.url).join(Image).filter(Image.user_id == user_id).all()
+    else:
+        stock = db.session.query(Fabric.fabric_id.label('id'), Image.url).join(Image).filter(Image.user_id == user_id).all()
+    return render_template("stock_gallery.html", stock=stock, stock_type=stock_type, user_id=user_id)
 
 
-@app.route("/<user_id>/pattern-gallery")
-def pattern_stock_gallery():
-    """Show all fabric images."""
-    sender_id = 1397850150328689
-    patterns = db.session.query(Pattern.pattern_id, Image.url).join(Image).filter(Image.user_id == sender_id).all()
-    return render_template("pattern-gallery.html", patterns=patterns)
+@app.route("/add-to-project.json", methods=["POST"])
+def add_to_favorites():
+    from lib.utilities import add_stock_to_project, add_next_stock_response
+    stock_id = request.form.get('id').encode('utf-8')
+    user_id = request.form.get('user_id').encode('utf-8')
+    stock_type = request.form.get('stock_type').encode('utf-8')
+    project_id = crafter.get(user_id, dict()).get('project_id')
+    if project_id:
+        if stock_type == 'fabric':
+            stock = Fabric.query.filter(Fabric.fabric_id == stock_id).first()
+        else:
+            stock = Pattern.query.filter(Pattern.pattern_id == stock_id).first()
+        project = add_stock_to_project(stock=stock, project_id=project_id)
+        crafter[user_id][stock_type + '_id'] = stock_id
+        add_next_stock_response(sender_id=user_id, stock_type=stock_type)
+
+    response = {'status': "success", 'id': stock_id}
+    return jsonify(response)
 
 
-# @app.route("/add-to-favorites", methods=["POST"])
-# def add_to_favorites():
-#     stock_id = request.form.get("id")
-#     stock_type = request.form.get('stock_type')
-#     user_id = request.form.get("user_id")
-#     project_id = session.get(user_id, dict()).get('project_id')
-#     project = add_stock_to_project(stock_type=stock_type, project_id=project_id)
-#     crafter[sender_id][stock_type + '_id'] = stock_id
-#     add_next_stock_response(sender_id=user_id, stock_type=stock_type)
-
-#     response = { 'status': "success", 'id': photo_id}
-#     return jsonify(response)
+@app.route("/due-at.json")
+def add_due_date_calendar(user_id):
+    from lib.utilities import work_inprogress
+    inprogress = work_inprogress(sender_id=user_id)
+    dates = dict()
+    for project in inprogress:
+        if str(project.due_at.date()) not in dates.keys():
+            dates[str(project.due_at.date())] = dict(number=0)
+        dates[str(project.due_at.date())]['number'] += 1
+    response = {'status': "success", 'dates': dates}
+    return jsonify(response)
 
 
 @page.after_send

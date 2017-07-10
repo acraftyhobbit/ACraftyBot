@@ -2,7 +2,7 @@
 <html>
 <head>
    <script src="http://code.jquery.com/jquery-1.11.3.min.js"></script>
-    <title>Fabric Stock</title>
+    <title>{{ stock_type }} Stock</title>
     <style>
   .image {
     border: 1px solid #ddd;
@@ -17,15 +17,17 @@
 </style>
 </head>
 <body>
- <h1>All Fabric</h1>
+ <h1>All {{ stock_type }}</h1>
 <div class="stock-photo">      
-  {% for fabric in fabrics %}
+  {% for item in stock %}
             <div>
-              <img class='image'src={{ fabric.url }}>
-               <button id = "{{ fabric.fabric_id }}" class="favorite-btn"> Add to Project</button>
+              <img class='image'src={{ item.url }}>
+               <button id = "{{ item.id }}" class="favorite-btn {{ stock_type}}"> Add to Project</button>
             </div>
   
     {% endfor %}
-<script src="../static/js/favorites.js"></script>  
+<script src="../../static/js/favorites.js"></script>  
 </body>
 </html>
+
+

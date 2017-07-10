@@ -1,21 +1,27 @@
+
 $(function () { // this is the jquery shortcut for document.ready()
 
-    function addToFavorites(evt) {
+    function addToProjects(evt) {
 
         var id = this.id; // this is the id on the button we clicked, which is the image's id
-
-        $.post("/add-to-favorites", {'id': id}, addToFavoritesSuccess);
+        var url = window.location.pathname;
+        var info = url.split("/");
+        var user_id = info[2];
+        var stock_type = info[3];
+        $.post("/add-to-project.json", {'id': id, 'user_id': user_id, 'stock_type': stock_type}, addToProjectsSuccess);
     }
 
-    function addToFavoritesSuccess(result) {
+    function addToProjectsSuccess(result) {
 
-        console.log(result.id);
+        console.log(result.status);
 
         var id = result.id;
 
         $('#' + id).css('color', 'red'); // give our user some feedback
+        $('.favorite-btn').attr("disabled", "disabled");
+        alert("This fabric will be add to your new project.");
     }
 
-    $('.favorite-btn').click(addToFavorites);
+    $('.favorite-btn').click(addToProjects);
 
 });

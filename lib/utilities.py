@@ -1,6 +1,7 @@
 from fbmq import QuickReply
 from lib.model import User, Project, Proj_Stat, Status, Pattern, Image, Fabric, connect_to_db, db
-from server import page, crafter
+from server import page
+from settings import crafter
 from datetime import timedelta, datetime
 
 ##############################################################################
@@ -34,9 +35,9 @@ def work_inprogress(sender_id):
 
     if not complete:
 
-        inprogress = db.session.query(Project.name, Project.project_id).filter(Project.user_id == sender_id).all()
+        inprogress = db.session.query(Project.name, Project.project_id, Project.due_at).filter(Project.user_id == sender_id).all()
     else:
-        inprogress = db.session.query(Project.name, Project.project_id).filter(db.not_(Project.project_id.in_(complete))) & (Project.user_id == sender_id).all()
+        inprogress = db.session.query(Project.name, Project.project_id, Project.due_at).filter(db.not_(Project.project_id.in_(complete)) & (Project.user_id == sender_id)).all()
     return inprogress
 
 
@@ -103,3 +104,12 @@ def add_next_stock_response(sender_id, stock_type):
         page.send(sender_id, "Got it! Do you have the fabric you want to make this pattern with?", quick_replies=yes_no)
     else:
         page.send(sender_id, "Success, How many weeks do you want to do this project?")
+
+
+def add_status_update(project_id, image):
+    project_count = db.session.query(db.func.count(Proj_Stat.proj_stat_id)).filter(Proj_Stat.project_id == project_id).first()[0]
+    update_status = Proj_Stat(image_id=image.image_id, project_id=project_id, status_id=project_count+1, created_at='now')
+    db.session.add(update_status)
+    db.session.commit()
+    return update_status
+
