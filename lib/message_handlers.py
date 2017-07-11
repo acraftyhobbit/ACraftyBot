@@ -19,7 +19,7 @@ def handle_message(event):
     if message_text and "craftybot" in message_text.lower():
         handle_start_route(sender_id=sender_id)
 
-    elif message_text == 'New Project' or message_text == 'Add Stock' or message_text == 'Update Status' or message_text == 'Note'or message_text == 'No Note':
+    elif message_text == 'New Project' or message_text == 'Add Stock' or message_text == 'Update Status' or message_text == 'Note'or message_text == 'No Notes':
         pass
     elif crafter[sender_id].get('current_route') == 'new_project' and not crafter[sender_id].get('project_id'):
         handle_project_name(sender_id=sender_id, message_text=message_text)

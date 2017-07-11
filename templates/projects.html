@@ -13,80 +13,40 @@
   .title{
     font-size: 25px;
   }
-</style>
-<link rel="stylesheet" href="http://netdna.bootstrapcdn.com/bootstrap/3.0.3/css/bootstrap.min.css">
-    <!-- Respomsive slider -->
-    <link href="../../static/css/responsive-calendar.css" rel="stylesheet">
+    </style>
+<link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet">
 <script src="https://unpkg.com/react@latest/dist/react.js"></script>
 <script src="https://unpkg.com/react-dom@latest/dist/react-dom.js"></script>
 <script src="https://unpkg.com/babel-standalone@6.15.0/babel.min.js"></script>
 <script type="https://cdnjs.cloudflare.com/ajax/libs/handlebars.js/4.0.10/handlebars.js"></script>
+<link rel="stylesheet" href="../../static/css/theme3.css"/>
 </head>
 
 <body>
-  <body>
-    <div class="container">
-      <!-- Responsive calendar - START -->
-      <div class="responsive-calendar">
-        <div class="controls">
-            <a class="pull-left" data-go="prev"><div class="btn btn-primary">Prev</div></a>
-            <h4><span data-head-year></span> <span data-head-month></span></h4>
-            <a class="pull-right" data-go="next"><div class="btn btn-primary">Next</div></a>
-        </div><hr/>
-        <div class="day-headers">
-          <div class="day header">Mon</div>
-          <div class="day header">Tue</div>
-          <div class="day header">Wed</div>
-          <div class="day header">Thu</div>
-          <div class="day header">Fri</div>
-          <div class="day header">Sat</div>
-          <div class="day header">Sun</div>
-        </div>
-        <div class="days" data-group="days">
-          
-        </div>
-      </div>
-      <!-- Responsive calendar - END -->
-    </div>
-    <script src="../../static/js/jquery.js"></script>
-    <script src="../../static/js/responsive-calendar.js"></script>
-    <script type="text/javascript">
-    var dates = $.getJSON( "/due-at.json", function() {
-          console.log( "success" );
-        })
-    
-      var currentTime = new Date()
-      var month = currentTime.getMonth() + 1
-      var year = currentTime.getFullYear()
-      $(document).ready(function () {
-        $(".responsive-calendar").responsiveCalendar({
-          time: (year + "-" + month),
-          events: dates
-        });
-      });
-    </script>
-<div id="root"></div> 
-<div id="Demo"></div> 
+<div id="caleandar" class="container-fluid"></div><br>
+<div id="root"></div><br>
 
 
+<div>
+  <h1>All Projects</h1>
+  <ul style="list-style: none;">
+    {% for project in projects %}
+        <li>
+            <a class = 'title' href="/user/{{ user_id }}/projects/{{ project['project_id'] }}">
+             {{ project['name']}} 
+            </a><br>
+            <a href = "/user/{{ user_id }}/pattern"><img class='image' src={{ project['pattern_image'] }}></a><a href= "/user/{{ user_id }}/fabric"><img class= 'image'src={{ project['fabric_image'] }}></a>
+          {% for image in range(6) %}
+            <img class ='image' src= {{ project['status_images'][image] | default("../../static/images/grey_box.jpg") }}>
+            {% endfor %} 
+        
+       </li>
 
-    <h1>All Projects</h1>
-    <ul style="list-style: none;">
-      {% for project in projects %}
-          <li>
-              <a class = 'title' href="/user{{ user_id }}/projects/{{ project['project_id'] }}">
-               {{ project['name']}} 
-              </a><br>
-              <a href = "/user/{{ user_id }}/pattern"><img class='image' src={{ project['pattern_image'] }}></a><a href= "/user/{{ user_id }}/fabric"><img class= 'image'src={{ project['fabric_image'] }}></a>
-            {% for image in range(6) %}
-              <img class ='image' src= {{ project['status_images'][image] | default("../../static/images/grey_box.jpg") }}>
-              {% endfor %} 
-          
-         </li>
-  
-    {% endfor %}
-    </ul>
-
+  {% endfor %}
+  </ul>
+</div>
+<script type="text/javascript" src="../../static/js/caleandar.min.js"></script>
+<script type="text/javascript" src="../../static/js/mycalendar.js"></script>
 <script src="/static/react.js"></script>
 <script type="text/babel">
 'use strict';

@@ -1,4 +1,4 @@
-from fbmq import QuickReply
+from fbmq import QuickReply, Template
 from lib.model import User, Project, Proj_Stat, Status, Pattern, Image, Fabric, connect_to_db, db
 from server import page
 from settings import crafter
@@ -100,8 +100,7 @@ def add_user(sender_id):
 
 def add_next_stock_response(sender_id, stock_type):
     if stock_type == 'pattern':
-        yes_no = [QuickReply(title="Yes", payload="YES"), QuickReply(title="No", payload="NO")]
-        page.send(sender_id, "Got it! Do you have the fabric you want to make this pattern with?", quick_replies=yes_no)
+        page.send(sender_id, Template.Buttons("If you have the material upload you next photo or pick something from your exisiting stock.", [{'type': 'web_url', 'title': 'Open Fabric Gallery', 'value': 'http://localhost:5000/user/{}/fabric'.format(sender_id)}]))
     else:
         page.send(sender_id, "Success, How many weeks do you want to do this project?")
 

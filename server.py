@@ -55,7 +55,7 @@ def task_update_status(payload, event):
 
     in_progress = work_inprogress(sender_id=sender_id)
     quick_replies = list()
-    for name, project_id in in_progress:
+    for name, project_id, due_at in in_progress:
         quick_replies.append(QuickReply(title=name, payload="project_{}".format(project_id)))
 
     page.send(sender_id, "Great. Which project do you want to update?", quick_replies=quick_replies)
@@ -92,23 +92,6 @@ def select_project_callback(payload, event):
     project_id = int(payload.split('_')[-1])
     crafter[sender_id]['project_id'] = project_id
     page.send(sender_id, "Upload you newest project photo.")
-
-
-@page.callback(['YES'])
-def callback_clicked_yes(payload, event):
-    """User selects yes button"""
-    from lib.utilities import extract_data
-    sender_id, message, message_text, message_attachments, quick_reply, = extract_data(event)
-    page.send(sender_id, "Great. Please upload your next photo to add to the project")
-
-
-@page.callback(['NO'])
-def callback_clicked_no(payload, event):
-    """User selects no button"""
-    from lib.utilities import extract_data
-    sender_id, message, message_text, message_attachments, quick_reply, = extract_data(event)
-    page.send(sender_id, Template.Buttons("Do you want to use something from  your stock?", [
-        {'type': 'web_url', 'title': 'Open Stock Gallery', 'value': 'http://localhost:5000/user/{}/fabric'.format(sender_id)}]))
 
 
 @page.callback(['NOTE'])
@@ -164,7 +147,7 @@ def stock_gallery(user_id, stock_type):
 
 
 @app.route("/add-to-project.json", methods=["POST"])
-def add_to_favorites():
+def add_to_projects():
     from lib.utilities import add_stock_to_project, add_next_stock_response
     stock_id = request.form.get('id').encode('utf-8')
     user_id = request.form.get('user_id').encode('utf-8')
@@ -183,7 +166,7 @@ def add_to_favorites():
     return jsonify(response)
 
 
-@app.route("/due-at.json")
+@app.route("/user/<user_id>/due-at.json")
 def add_due_date_calendar(user_id):
     from lib.utilities import work_inprogress
     inprogress = work_inprogress(sender_id=user_id)
