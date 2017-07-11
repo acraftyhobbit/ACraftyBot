@@ -2,7 +2,7 @@ from lib.utilities import total_inprogress, add_user, add_image, add_project, ad
 from lib.model import User, Project, Proj_Stat, Status, Pattern, Image, Fabric, connect_to_db, db
 from fbmq import Page, Attachment, Template, QuickReply, NotificationType
 from server import page
-from settings import crafter
+from settings import crafter, server_host
 from datetime import timedelta, datetime
 
 ##############################################################################
@@ -12,7 +12,7 @@ def handle_message(event):
     """Handles message types recieved by the bot."""
     from lib.utilities import extract_data
     sender_id, message, message_text, message_attachments, quick_reply, = extract_data(event)
-
+    print message_text
     if sender_id not in crafter.keys():
         crafter[sender_id] = {}
 
@@ -52,7 +52,7 @@ def handle_start_route(sender_id):
     """Handles message text for first communication with bot."""
     user = add_user(sender_id=sender_id)
     total_inprogress(sender_id=sender_id)
-    if total_inprogress(sender_id=sender_id) >= 6:
+    if total_inprogress(sender_id=sender_id) >= 600:
         craftybot = [QuickReply(title="Update Status", payload="UPDATE_STATUS"), QuickReply(title="Add Stock", payload="STOCK")]
         page.send(sender_id, "You have reach max for projects. You need to finish something before you can add another new project.", quick_replies=craftybot)
     else:
@@ -68,7 +68,7 @@ def handle_project_name(sender_id, message_text):
         project = add_project(sender_id=sender_id, name=message_text.strip())
         crafter[sender_id]['project_id'] = project.project_id
         page.send(sender_id, Template.Buttons("Please upload your pattern photo to start a new project or click to open stock gallery.", [
-            {'type': 'web_url', 'title': 'Open Stock Gallery', 'value': 'http://localhost:5000/user/{}/pattern'.format(sender_id)}]))
+            {'type': 'web_url', 'title': 'Open Stock Gallery', 'value': server_host + '/user/{}/pattern'.format(sender_id)}]))
     else:
         page.send('please add a project name')
 
@@ -90,7 +90,6 @@ def handle_stock_image(sender_id, image_url, stock_type):
 
 def handle_due_date(sender_id, message_text):
     from lib.utilities import update_project_due_date
-
     try:
         weeks = int(message_text.strip())
     except:

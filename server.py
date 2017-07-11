@@ -7,7 +7,7 @@ from fbmq import Page, Attachment, Template, QuickReply, NotificationType
 from lib.model import User, Project, Proj_Stat, Status, Pattern, Image, Fabric, connect_to_db, db
 from seed_status import create_status
 from datetime import datetime, timedelta
-from settings import crafter
+from settings import crafter, server_host
 app = Flask(__name__)
 facebook = os.environ['FACEBOOK_TOKEN']
 page = Page(facebook)
@@ -32,6 +32,7 @@ def webhook():
 @page.handle_message
 def received_message(event):
     from lib.message_handlers import handle_message
+    print event
     handle_message(event=event)
 
 
@@ -170,11 +171,10 @@ def add_to_projects():
 def add_due_date_calendar(user_id):
     from lib.utilities import work_inprogress
     inprogress = work_inprogress(sender_id=user_id)
-    dates = dict()
+    dates = []
     for project in inprogress:
-        if str(project.due_at.date()) not in dates.keys():
-            dates[str(project.due_at.date())] = dict(number=0)
-        dates[str(project.due_at.date())]['number'] += 1
+        due_at = project.due_at.isoformat()
+        dates.append(dict(Date=due_at, Title=project.name, Link=server_host + "/user/{}/projects/{}".format(user_id, project.project_id)))
     response = {'status': "success", 'dates': dates}
     return jsonify(response)
 

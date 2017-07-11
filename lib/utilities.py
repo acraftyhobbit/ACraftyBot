@@ -1,7 +1,7 @@
 from fbmq import QuickReply, Template
 from lib.model import User, Project, Proj_Stat, Status, Pattern, Image, Fabric, connect_to_db, db
 from server import page
-from settings import crafter
+from settings import crafter, server_host
 from datetime import timedelta, datetime
 
 ##############################################################################
@@ -42,9 +42,20 @@ def work_inprogress(sender_id):
 
 
 def add_image(sender_id, image_url):
+    import boto3
+    import requests
+    s3 = boto3.resource('s3')
     image = Image(user_id=sender_id, url=image_url, created_at='now')
     db.session.add(image)
     db.session.commit()
+    try:
+        image_response = requests.get(image_url)
+    except:
+        pass
+    else:
+        s3.Bucket('acraftybot-test').put_object(Key="{}.jpg".format(image.image_id), Body=image_response.content) 
+        image.url=' https://s3-us-west-2.amazonaws.com/acraftybot-test/{}.jpg'.format(image.image_id)
+        db.session.commit()
     return image
 
 
@@ -100,7 +111,7 @@ def add_user(sender_id):
 
 def add_next_stock_response(sender_id, stock_type):
     if stock_type == 'pattern':
-        page.send(sender_id, Template.Buttons("If you have the material upload you next photo or pick something from your exisiting stock.", [{'type': 'web_url', 'title': 'Open Fabric Gallery', 'value': 'http://localhost:5000/user/{}/fabric'.format(sender_id)}]))
+        page.send(sender_id, Template.Buttons("If you have the material upload you next photo or pick something from your exisiting stock.", [{'type': 'web_url', 'title': 'Open Fabric Gallery', 'value': server_host + '/user/{}/fabric'.format(sender_id)}]))
     else:
         page.send(sender_id, "Success, How many weeks do you want to do this project?")
 

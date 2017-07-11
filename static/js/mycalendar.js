@@ -1,8 +1,14 @@
-var events = [
-  {'Date': new Date(2017, 6, 7), 'Title': 'Doctor appointment at 3:25pm.'},
-  {'Date': new Date(2017, 6, 18), 'Title': 'New Garfield movie comes out!', 'Link': 'https://garfield.com'},
-  {'Date': new Date(2017, 6, 27), 'Title': '25 year anniversary', 'Link': 'https://www.google.com.au/#q=anniversary+gifts'},
-];
+var events = 
+    function showProjectDates(result) {
+        var date = new Date(result.Date)
+    }
+    function updateDates() {
+        var url = window.location.pathname;
+        var info = url.split("/");
+        var user_id = info[2];
+    $.get('/user/' + user_id +'/due-at.json',{'user_id': user_id}, showProjectDates);
+    console.log("Finished sending AJAX");
+};
 var settings = {Color: '#999',                //(string - color) font color of whole calendar.
     LinkColor: '#333',            //(string - color) font color of event titles.
     NavShow: true,                //(bool) show navigation arrows.
