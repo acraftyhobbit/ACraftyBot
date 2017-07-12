@@ -173,10 +173,9 @@ def add_due_date_calendar(user_id):
     inprogress = work_inprogress(sender_id=user_id)
     dates = []
     for project in inprogress:
-        due_at = project.due_at.isoformat()
+        due_at = datetime.strftime(project.due_at, "%Y %m %d")
         dates.append(dict(Date=due_at, Title=project.name, Link=server_host + "/user/{}/projects/{}".format(user_id, project.project_id)))
-    response = {'status': "success", 'dates': dates}
-    return jsonify(response)
+    return jsonify(dates)
 
 
 @page.after_send

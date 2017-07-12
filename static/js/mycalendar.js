@@ -1,14 +1,9 @@
-var events = 
-    function showProjectDates(result) {
-        var date = new Date(result.Date)
-    }
-    function updateDates() {
+ function updateDates() {
         var url = window.location.pathname;
         var info = url.split("/");
         var user_id = info[2];
     $.get('/user/' + user_id +'/due-at.json',{'user_id': user_id}, showProjectDates);
-    console.log("Finished sending AJAX");
-};
+}
 var settings = {Color: '#999',                //(string - color) font color of whole calendar.
     LinkColor: '#333',            //(string - color) font color of event titles.
     NavShow: true,                //(bool) show navigation arrows.
@@ -22,4 +17,20 @@ var settings = {Color: '#999',                //(string - color) font color of w
     DisabledDays: [],             //(array of numbers) days of the week to be slightly transparent. ie: [1,6] to fade Sunday and Saturday.
     }
 var element = document.getElementById('caleandar');
-caleandar(element, events, settings);
+updateDates();
+ 
+
+function showProjectDates(results) {
+        events = results
+         var dates = events.map(function(element){
+    element['Date'] = new Date (element['Date'])
+return element}) 
+         console.log(dates)
+// var dates = [
+//   {'Date': new Date(2017, 6, 7), 'Title': 'Doctor appointment at 3:25pm.'},
+//   {'Date7': new Date(2017, 6, 18), 'Title': 'New Garfield movie comes out!', 'Link': 'https://garfield.com'},
+//   {'Date': new Date(201, 6, 27), 'Title': '25 year anniversary', 'Link': 'https://www.google.com.au/#q=anniversary+gifts'},
+// ];
+         caleandar(element, dates, settings); 
+    }
+   
