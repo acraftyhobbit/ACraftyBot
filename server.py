@@ -21,6 +21,7 @@ app.jinja_env.undefined = StrictUndefined
 
 @app.route('/webhook', methods=['POST', 'GET'])
 def webhook():
+    """Run once at the begining to connect to facebook api."""
     if request.method == 'POST':
         page.handle_webhook(request.get_data(as_text=True))
         return "ok"
@@ -31,13 +32,14 @@ def webhook():
 
 @page.handle_message
 def received_message(event):
+    """Handle all incoming message from facebook."""
     from lib.message_handlers import handle_message
-    print event
     handle_message(event=event)
 
 
 @page.callback(['NEW_PROJECT'])
 def task_new_project(payload, event):
+    """User selected new project from main menu options."""
     from lib.utilities import extract_data
     sender_id, message, message_text, message_attachments, quick_reply, = extract_data(event)
     if sender_id not in crafter.keys():
@@ -48,6 +50,7 @@ def task_new_project(payload, event):
 
 @page.callback(['UPDATE_STATUS'])
 def task_update_status(payload, event):
+    """User selected update status from main menu options."""
     from lib.utilities import extract_data, work_inprogress
     sender_id, message, message_text, message_attachments, quick_reply, = extract_data(event)
     if sender_id not in crafter.keys():
@@ -64,6 +67,7 @@ def task_update_status(payload, event):
 
 @page.callback(['STOCK'])
 def task_new_stock(payload, event):
+    """User selected to add to stock from main menu options."""
     from lib.utilities import extract_data
     sender_id, message, message_text, message_attachments, quick_reply, = extract_data(event)
     if sender_id not in crafter.keys():
@@ -86,6 +90,7 @@ def callback_clicked_fabric_stock(payload, event):
 
 @page.callback(['project_(.+)'])
 def select_project_callback(payload, event):
+    """User selects a project from quick reply list to update."""
     from lib.utilities import extract_data
     sender_id, message, message_text, message_attachments, quick_reply, = extract_data(event)
     if sender_id not in crafter.keys():
@@ -108,7 +113,7 @@ def callback_clicked_no_note(payload, event):
     """User selects no note button"""
     from lib.utilities import extract_data
     sender_id, message, message_text, message_attachments, quick_reply, = extract_data(event)
-    page.send(sender_id, "Your project has been saved. If you would like to get back to main menu type 'craftybot' again.")
+    page.send(sender_id, Template.Buttons("Your project has been saved. If you would like to get back to main menu type 'craftybot' again.", [{'type': 'web_url', 'title': 'Open Projects Home', 'value': server_host + '/user/{}/projects'.format(sender_id)}]))
     crafter[sender_id] = dict()
 
 
@@ -149,6 +154,7 @@ def stock_gallery(user_id, stock_type):
 
 @app.route("/add-to-project.json", methods=["POST"])
 def add_to_projects():
+    """Adds fabric or pattern stock to a new project."""
     from lib.utilities import add_stock_to_project, add_next_stock_response
     stock_id = request.form.get('id').encode('utf-8')
     user_id = request.form.get('user_id').encode('utf-8')
@@ -169,6 +175,7 @@ def add_to_projects():
 
 @app.route("/user/<user_id>/due-at.json")
 def add_due_date_calendar(user_id):
+    """Displays project due dates on calendar."""
     from lib.utilities import work_inprogress
     inprogress = work_inprogress(sender_id=user_id)
     dates = []

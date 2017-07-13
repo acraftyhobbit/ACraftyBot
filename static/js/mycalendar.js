@@ -25,12 +25,6 @@ function showProjectDates(results) {
          var dates = events.map(function(element){
     element['Date'] = new Date (element['Date'])
 return element}) 
-         console.log(dates)
-// var dates = [
-//   {'Date': new Date(2017, 6, 7), 'Title': 'Doctor appointment at 3:25pm.'},
-//   {'Date7': new Date(2017, 6, 18), 'Title': 'New Garfield movie comes out!', 'Link': 'https://garfield.com'},
-//   {'Date': new Date(201, 6, 27), 'Title': '25 year anniversary', 'Link': 'https://www.google.com.au/#q=anniversary+gifts'},
-// ];
          caleandar(element, dates, settings); 
     }
    

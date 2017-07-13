@@ -9,14 +9,14 @@ from datetime import timedelta, datetime
 
 
 def handle_message(event):
-    """Handles message types recieved by the bot."""
+    """Handles all message types recieved by the bot and routes accordingly."""
     from lib.utilities import extract_data
     sender_id, message, message_text, message_attachments, quick_reply, = extract_data(event)
     print message_text
     if sender_id not in crafter.keys():
         crafter[sender_id] = {}
 
-    if message_text and "craftybot" in message_text.lower():
+    if message_text and "craftybot" in message_text.lower(): #Lines 19 - 31 Handle all message dealing with text
         handle_start_route(sender_id=sender_id)
 
     elif message_text == 'New Project' or message_text == 'Add Stock' or message_text == 'Update Status' or message_text == 'Note'or message_text == 'No Notes':
@@ -30,7 +30,7 @@ def handle_message(event):
     elif crafter[sender_id].get('current_route') == 'new_project' and crafter[sender_id].get('due_date'):
         handle_project_notes(sender_id=sender_id, message_text=message_text)
 
-    elif message_attachments:
+    elif message_attachments: #Handles all message that are none text base, mostly attachmets
         image_url = message_attachments[0].get('payload', {}).get('url')
         if crafter[sender_id].get('current_route') == 'new_project' and crafter[sender_id].get('project_id') and not crafter[sender_id].get('fabric_id'):
             stock_type = 'pattern'
@@ -84,11 +84,13 @@ def handle_stock_image(sender_id, image_url, stock_type):
         add_next_stock_response(sender_id=sender_id, stock_type=stock_type)
 
     else:
-        page.send(sender_id, "This image has been add to your {} stock photos.To update another project say 'craftybot'".format(stock_type))
+        page.send(sender_id, Template.Buttons("This image has been add to your {} stock photos.To update another project say 'craftybot' or click to open your projects page".format(stock_type),[
+            {'type': 'web_url', 'title': 'Open Projects Home', 'value': server_host + '/user/{}/projects'.format(sender_id=sender_id)}]))
         crafter[sender_id] = dict()
 
 
 def handle_due_date(sender_id, message_text):
+    """Takes in the number of weeks a user has to do their new project."""
     from lib.utilities import update_project_due_date
     try:
         weeks = int(message_text.strip())
@@ -102,13 +104,14 @@ def handle_due_date(sender_id, message_text):
         crafter[sender_id]['due_date'] = weeks
 
 
-
 def handle_project_notes(sender_id, message_text):
+    """Handles any notes the user inputs to their new project."""
     from lib.utilities import update_project_notes
     if message_text:
         project_id = crafter[sender_id].get('project_id')
         project = update_project_notes(project_id=project_id, message_text=message_text)
-        page.send(sender_id, "Your note has been added to your project. If you would like to get back to main menu type 'craftybot' again.")
+        page.send(sender_id, Template.Buttons("Your note has been added to your project. If you would like to get back to main menu type 'craftybot' again or click to view your projects page.", [
+            {'type': 'web_url', 'title': 'Open Projects Home', 'value': server_host + '/user/{}/projects'.format(sender_id=sender_id)}]))
         crafter[sender_id] = dict()
     else:
         page.send('did you want to leave a note?')
@@ -125,4 +128,5 @@ def handle_status_image(sender_id, image_url):
     status = Status.query.filter(Status.status_id == update_status.status_id).first()
     due_date = datetime.strftime(project.due_at, "%A, %B %d, %Y")
     crafter[sender_id] = dict()
-    page.send(sender_id, "YAY! You're {status}. Reminder your due date is {due_date}. To update another project say 'craftybot'".format(status=status.name, due_date=due_date))
+    page.send(sender_id, Template.Buttons("YAY! You're {status}. Reminder your due date is {due_date}. To update another project say 'craftybot'".format(status=status.name, due_date=due_date), [
+            {'type': 'web_url', 'title': 'Open Projects Home', 'value': server_host + '/user/{}/projects'.format(sender_id=sender_id)}]))

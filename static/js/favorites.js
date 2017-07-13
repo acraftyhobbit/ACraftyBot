@@ -16,10 +16,14 @@ $(function () { // this is the jquery shortcut for document.ready()
         console.log(result.status);
 
         var id = result.id;
+        var url = window.location.pathname;
+        var info = url.split("/");
+        var user_id = info[2];
 
         $('#' + id).css('color', 'red'); // give our user some feedback
         $('.favorite-btn').attr("disabled", "disabled");
         alert("This fabric will be add to your new project.");
+        window.location.replace("http://localhost:5000/user/" + user_id + "/projects"
     }
 
     $('.favorite-btn').click(addToProjects);

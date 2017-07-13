@@ -144,6 +144,14 @@ def connect_to_db(app):
     db.app = app
     db.init_app(app)
 
+
+def example_data():
+    """Create example data for the test database."""
+    user = User(user_id=1397850150328689, created_at='now')
+
+    db.session.add(user)
+    db.session.commit()
+
 if __name__ == "__main__":
     # As a convenience, if we run this module interactively, it will leave
     # you in a state of being able to work with the database directly.
