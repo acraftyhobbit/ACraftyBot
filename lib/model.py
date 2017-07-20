@@ -37,6 +37,7 @@ class Project(db.Model):
     name = db.Column(db.Text, nullable=True)
     notes = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime)
+    updated_at = db.Column(db.DateTime)
     due_at = db.Column(db.DateTime, nullable=True)
 
     user = db.relationship("User", backref="project")
@@ -135,11 +136,8 @@ class Image(db.Model):
 # Helper functions
 
 
-def connect_to_db(app):
-    """Connect the database to our Flask app."""
-
-    # Configure to use our PstgreSQL database
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql:///craftydata'
+def connect_to_db(app, db_uri="postgresql:///craftydata"):
+    app.config['SQLALCHEMY_DATABASE_URI'] = db_uri
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     db.app = app
     db.init_app(app)
@@ -152,10 +150,10 @@ def example_data():
     db.session.add(user)
     db.session.commit()
 
-if __name__ == "__main__":
-    # As a convenience, if we run this module interactively, it will leave
-    # you in a state of being able to work with the database directly.
+if __name__ == '__main__':
 
-    from Facebook_test import app
+    import sys
+    sys.path.append('..')
+
+    from server import app
     connect_to_db(app)
-    print "Connected to DB."

@@ -1,3 +1,5 @@
+
+
  function updateDates() {
         var url = window.location.pathname;
         var info = url.split("/");

@@ -85,7 +85,7 @@ def add_stock_to_project(project_id, stock):
 
 def add_project(sender_id, name):
     """Add a new project to the database"""
-    new_project = Project(user_id=sender_id, name=name, created_at='now')
+    new_project = Project(user_id=sender_id, name=name, created_at='now', updated_at='now')
     db.session.add(new_project)
     db.session.commit()
     return new_project
@@ -118,9 +118,9 @@ def add_user(sender_id):
 
 
 def add_next_stock_response(sender_id, stock_type):
-    """If the user select an item from stock galleries retunr correct response."""
+    """If the user select an item from stock galleries return correct response."""
     if stock_type == 'pattern':
-        if check_stock_count(stock_type='pattern', sender_id=sender_id) != 0:
+        if check_stock_count(stock_type='fabric', sender_id=sender_id) != 0:
             page.send(sender_id, Template.Buttons("If you have the material upload you next photo or pick something from your exisiting stock.", [{'type': 'web_url', 'title': 'Open Fabric Gallery', 'value': server_host + '/user/{}/fabric'.format(sender_id)}]))
         else:
             page.send(sender_id, "If you have the material upload you next photo")
@@ -133,6 +133,8 @@ def add_status_update(project_id, image):
     project_count = db.session.query(db.func.count(Proj_Stat.proj_stat_id)).filter(Proj_Stat.project_id == project_id).first()[0]
     update_status = Proj_Stat(image_id=image.image_id, project_id=project_id, status_id=project_count+1, created_at='now')
     db.session.add(update_status)
+    project = Project.query.filter(Project.project_id == project_id).first()
+    project.updated_at = 'now'
     db.session.commit()
     return update_status
 
@@ -141,21 +143,22 @@ def check_stock_count(stock_type, sender_id):
     """Counts the number of items in stock."""
 
     if stock_type == 'fabric':
-        fabric_count = Fabric.query.filter(Project.user_id == sender_id).all()
-        return fabric_count.count()
+        fabric_count = db.session.query(db.func.count(Fabric.fabric_id)).filter(Project.user_id == sender_id).first()
+        return fabric_count[0]
 
     else:
-        pattern_count = Pattern.query.filter(Project.user_id == sender_id).all()
-        return pattern_count.count()
+        pattern_count = db.session.query(db.func.count(Pattern.pattern_id)).filter(Project.user_id == sender_id).first()
+        return pattern_count[0]
 
 
 def delete_project(user_id, project_id):
     """Deletes a project from the database."""
+    proj_stat = Proj_Stat.query.filter(Project.project_id == project_id).all()
+    for stat in proj_stat:
+        db.session.delete(proj_stat)
     project = Project.query.filter(Project.project_id == project_id, Project.user_id == user_id).first()
-    proj_stat = Proj_Stat.query.filter(Project.project_id == project_id).first()
-    db.session.delete(proj_stat)
     db.session.delete(project)
-    db.commit()
+    db.session.commit()
 
 
 def delete_stock(user_id, stock_id, stock_type):
@@ -163,8 +166,23 @@ def delete_stock(user_id, stock_id, stock_type):
     if stock_type == 'fabric':
         fabric = Fabric.query.filter(Fabric.fabric_id == stock_id, Project.user_id == user_id).first()
         db.session.delete(fabric)
-        db.commit()
+        db.session.commit()
     else:
         pattern = Pattern.query.filter(Pattern.pattern_id == stock_id, Project.user_id == user_id).first()
         db.session.delete(pattern)
-        db.commit()
+        db.session.commit()
+
+def check_progress_status():
+    """Compares when a project was last updated."""
+    users=dict()
+    up_to_date = datetime.datetime.now() - timedelta(days=7)
+    complete = db.session.query(Proj_Stat.project_id).filter(Proj_Stat.status_id == 6).all()
+    last_update = db.session.query(Project.user_id, Project.name, Project.project_id).filter(Project.updated_at < up_to_date).all()
+    for user_id, name, project_id in last_update:
+        if user_id not in users.keys():
+            users[user_id] = []
+        if project_id not in complete:
+            users[user_id].append(QuickReply(title=name, payload="project_{}".format(project_id)))
+    for user_id, quick_replies in users.items():
+        if quick_replies:
+            page.send(user_id, "It appears you haven't updated the following projects. Do you want to update any of them", quick_replies=quick_replies)

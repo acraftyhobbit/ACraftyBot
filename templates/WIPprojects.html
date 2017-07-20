@@ -1,0 +1,57 @@
+<!doctype html>
+<html>
+<head>
+  <title>ACraftyBot Projects</title>
+  <style>
+  .image {
+    border: 1px solid #ddd;
+    border-radius: 4px;  
+    padding: 5px; 
+    width: 150px; 
+    height: 150px; 
+  }
+  .title{
+    font-size: 25px;
+  }
+  
+    </style>
+<link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet">
+<script type="https://cdnjs.cloudflare.com/ajax/libs/handlebars.js/4.0.10/handlebars.js"></script>
+<script src="http://code.jquery.com/jquery-1.11.3.min.js"></script>
+<link rel="stylesheet" href="../../static/css/theme3.css"/> 
+</head>
+
+<body>
+  <button onclick="calendarDisplay()">Calendar</button><button onclick="projectDisplay()">Project List</button><button onclick="incompleteDisplay()">Inprogress</button>
+<div id="caleandar" class="container-fluid"></div><br>
+
+
+
+<div id ="projects">
+  <h1>All Queue Projects</h1>
+  <button class="select">Edit projects</button>
+  <ul style="list-style: none;">
+    {% for project in projects %}
+    <form >
+        <li>
+            <a class = 'title' href="/user/{{ user_id }}/projects/{{ project['project_id'] }}">
+             {{ project['name']}} 
+            </a><br><button class="delete" id ="{{ project['project_id'] }}" style="display:none">Delete project</button>
+            <a href = "/user/{{ user_id }}/pattern"><img class='image' src={{ project['pattern_image'] }}></a><a href= "/user/{{ user_id }}/fabric"><img class= 'image'src={{ project['fabric_image'] }}></a>
+          {% for image in range(6) %}
+            <img class ='image' src= {{ project['status_images'][image] | default("../../static/images/grey_box.jpg") }}>
+            {% endfor %} 
+        
+       </li>
+
+  {% endfor %}
+   </form>
+  </ul>
+</div>
+<div id="in_progress" style="display:none">
+
+<script type="text/javascript" src="../../static/js/caleandar.js"></script>
+<script type="text/javascript" src="../../static/js/mycalendar.js"></script>  
+<script type="text/javascript" src="../../static/js/functions.js"></script>  
+</body>
+</html>

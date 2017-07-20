@@ -64,11 +64,14 @@ def handle_start_route(sender_id):
 
 def handle_project_name(sender_id, message_text):
     """Handles message text for naming user's new project."""  # user can't call project project
+    from lib.utilities import check_stock_count
     if message_text:
         project = add_project(sender_id=sender_id, name=message_text.strip())
         crafter[sender_id]['project_id'] = project.project_id
-        page.send(sender_id, Template.Buttons("Please upload your pattern photo to start a new project or click to open stock gallery.", [
-            {'type': 'web_url', 'title': 'Open Stock Gallery', 'value': server_host + '/user/{}/pattern'.format(sender_id)}]))
+        if check_stock_count(stock_type='pattern', sender_id=sender_id) != 0:
+            page.send(sender_id, Template.Buttons("Please upload your pattern photo to start a new project or click to open stock gallery.", [{'type': 'web_url', 'title': 'Open Stock Gallery', 'value': server_host + '/user/{}/pattern'.format(sender_id)}]))
+        else:
+            page.send(sender_id, "Please upload your pattern photo to start a new project")
     else:
         page.send('please add a project name')
 
@@ -111,7 +114,7 @@ def handle_project_notes(sender_id, message_text):
         project_id = crafter[sender_id].get('project_id')
         project = update_project_notes(project_id=project_id, message_text=message_text)
         page.send(sender_id, Template.Buttons("Your note has been added to your project. If you would like to get back to main menu type 'craftybot' again or click to view your projects page.", [
-            {'type': 'web_url', 'title': 'Open Projects Home', 'value': server_host + '/user/{}/projects'.format(sender_id=sender_id)}]))
+            {'type': 'web_url', 'title': 'Open Projects Home', 'value': server_host + '/user/{}/projects'.format(sender_id)}]))
         crafter[sender_id] = dict()
     else:
         page.send('did you want to leave a note?')

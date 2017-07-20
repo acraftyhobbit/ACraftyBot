@@ -2,7 +2,7 @@
 import os
 import sys
 from jinja2 import StrictUndefined
-from flask import Flask, jsonify, render_template, redirect, request, flash, session
+from flask import Flask, jsonify, render_template, redirect, request, flash, session, abort
 from fbmq import Page, Attachment, Template, QuickReply, NotificationType
 from lib.model import User, Project, Proj_Stat, Status, Pattern, Image, Fabric, connect_to_db, db
 from seed_status import create_status
@@ -23,6 +23,7 @@ app.jinja_env.undefined = StrictUndefined
 def webhook():
     """Run once at the begining to connect to facebook api."""
     if request.method == 'POST':
+        print request.get_data(as_text=True)
         page.handle_webhook(request.get_data(as_text=True))
         return "ok"
     else:
@@ -121,26 +122,31 @@ def callback_clicked_no_note(payload, event):
 def all_projects(user_id):
     """Show list of projects."""
     project_dicts = list()
-    projects = Project.query.filter(Project.fabric_id != None, Project.pattern_id != None).order_by(Project.project_id).all()
-    for project in projects:
-        project_dict = dict(
-            project_id=project.project_id,
-            name=project.name,
-            fabric_image=project.fabric.image.url,
-            pattern_image=project.pattern.image.url,
-            status_images=[stat.image.url for stat in project.proj_stat])
-        project_dicts.append(project_dict)
-    return render_template("projects.html", projects=project_dicts, user_id=user_id)
-
+    user = User.query.filter(User.user_id == user_id).first()
+    if user:
+        projects = Project.query.filter(Project.fabric_id != None, Project.pattern_id != None, Project.due_at != None, Project.user_id == user_id).order_by(Project.project_id).all()
+        for project in projects:
+            project_dict = dict(
+                project_id=project.project_id,
+                name=project.name,
+                fabric_image=project.fabric.image.url,
+                pattern_image=project.pattern.image.url,
+                status_images=[stat.image.url for stat in project.proj_stat])
+            project_dicts.append(project_dict)
+        return render_template("WIPprojects.html", projects=project_dicts, user_id=user_id)
+    else:
+        abort(404)
 
 @app.route("/user/<user_id>/projects/<project_id>")
-def project_details(user_id,project_id):
+def project_details(user_id, project_id):
     """Show project details."""
 
-    project = Project.query.filter_by(project_id=project_id).one()
-    due_at = datetime.strftime(project.due_at, "%A, %B %d, %Y")
-    return render_template("project-details.html", project=project, due_at=due_at)
-
+    project = Project.query.filter(Project.project_id == project_id).first()
+    if project and project.name and project.pattern and project.fabric and project.due_at:
+        due_date = datetime.strftime(project.due_at, "%A, %B %d, %Y")
+        return render_template("project-details.html", project=project, due_at=due_date)
+    else:
+        abort(404)
 
 @app.route("/user/<user_id>/<stock_type>")
 def stock_gallery(user_id, stock_type):
@@ -149,7 +155,10 @@ def stock_gallery(user_id, stock_type):
         stock = db.session.query(Pattern.pattern_id.label('id'), Image.url).join(Image).filter(Image.user_id == user_id).all()
     else:
         stock = db.session.query(Fabric.fabric_id.label('id'), Image.url).join(Image).filter(Image.user_id == user_id).all()
-    return render_template("stock_gallery.html", stock=stock, stock_type=stock_type, user_id=user_id)
+    if stock:
+        return render_template("stock_gallery.html", stock=stock, stock_type=stock_type, user_id=user_id)
+    else:
+        abort(404)
 
 
 @app.route("/add-to-project.json", methods=["POST"])
@@ -180,10 +189,36 @@ def add_due_date_calendar(user_id):
     inprogress = work_inprogress(sender_id=user_id)
     dates = []
     for project in inprogress:
-        due_at = datetime.strftime(project.due_at, "%Y %m %d")
-        dates.append(dict(Date=due_at, Title=project.name, Link=server_host + "/user/{}/projects/{}".format(user_id, project.project_id)))
+        if project.due_at:
+            due_at = datetime.strftime(project.due_at, "%Y %m %d")
+            dates.append(dict(Date=due_at, Title=project.name, Link=server_host + "/user/{}/projects/{}".format(user_id, project.project_id)))
     return jsonify(dates)
 
+@app.route("/user/<user_id>/incomplete-projects.json")
+def display_incomplete_projects(user_id):
+    """Generates the display information of projects that are only half complete."""
+    user_id = request.form.get('user_id')
+    incomp_projects = Project.query.filter(Project.due_at == None, Project.user_id == user_id).order_by(Project.project_id).all()
+    for incomp_project in incomp_projects:
+            incomp_project_dict = dict(
+                project_id=incomp_project.project_id,
+                name=incomp_project.name,
+                fabric_image=incomp_project.fabric.image.url,
+                pattern_image=incomp_project.pattern.image.url,
+                status_images=[stat.image.url for stat in incomp_project.proj_stat])
+            incomp_project_dicts.append(incomp_project_dict)
+
+@app.route("/delete-project.json", methods=["POST"])
+def delete_project_from_db():
+    """Delete projects from data base selected by user."""
+    from lib.utilities import delete_project
+    project_id = request.form.get('id').encode('utf-8')
+    user_id = request.form.get('user_id').encode('utf-8')
+    print project_id
+    delete_project(user_id=user_id, project_id=project_id)
+
+    response = {'status': "success", 'id': project_id}
+    return jsonify(response)
 
 @page.after_send
 def after_send(payload, response):

@@ -1,2 +1,2 @@
 crafter = dict()
-server_host = 'http://532bc206.ngrok.io'
+server_host = 'http://e5c35fa1.ngrok.io'
