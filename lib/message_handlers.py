@@ -1,166 +1,138 @@
-from lib.utilities import extract_data, total_inprogress
+from lib.utilities import total_inprogress, add_user, add_image, add_project, add_stock, add_stock_to_project, add_next_stock_response
 from lib.model import User, Project, Proj_Stat, Status, Pattern, Image, Fabric, connect_to_db, db
 from fbmq import Page, Attachment, Template, QuickReply, NotificationType
-from server import user_state, state, page, crafter
+from server import page
+from settings import crafter, server_host
 from datetime import timedelta, datetime
 
 ##############################################################################
 
 
 def handle_message(event):
-    """Handles message types recieved by the bot."""
+    """Handles all message types recieved by the bot and routes accordingly."""
+    from lib.utilities import extract_data
     sender_id, message, message_text, message_attachments, quick_reply, = extract_data(event)
+    print message_text
+    if sender_id not in crafter.keys():
+        crafter[sender_id] = {}
 
-    if message_text and "craftybot" in message_text.lower():
-        handle_text_event_1(event=event)
+    if message_text and "craftybot" in message_text.lower(): #Lines 19 - 31 Handle all message dealing with text
+        handle_start_route(sender_id=sender_id)
 
-    elif message_text and user_state.get(sender_id) == state[0]:
-        handle_text_event_2(event=event)
+    elif message_text == 'New Project' or message_text == 'Add Stock' or message_text == 'Update Status' or message_text == 'Note'or message_text == 'No Notes':
+        pass
+    elif crafter[sender_id].get('current_route') == 'new_project' and not crafter[sender_id].get('project_id'):
+        handle_project_name(sender_id=sender_id, message_text=message_text)
 
-    elif message_text and user_state.get(sender_id) == state[5]:
+    elif crafter[sender_id].get('current_route') == 'new_project' and crafter[sender_id].get('fabric_id') and not crafter[sender_id].get('due_date'):
+        handle_due_date(sender_id, message_text)
+
+    elif crafter[sender_id].get('current_route') == 'new_project' and crafter[sender_id].get('due_date'):
+        handle_project_notes(sender_id=sender_id, message_text=message_text)
+
+    elif message_attachments: #Handles all message that are none text base, mostly attachmets
+        image_url = message_attachments[0].get('payload', {}).get('url')
+        if crafter[sender_id].get('current_route') == 'new_project' and crafter[sender_id].get('project_id') and not crafter[sender_id].get('fabric_id'):
+            stock_type = 'pattern'
+            if crafter[sender_id].get('pattern_id'):
+                stock_type = 'fabric'
+            handle_stock_image(sender_id=sender_id, image_url=image_url, stock_type=stock_type)
+
+        elif crafter[sender_id].get('current_route') == 'add_stock':
+            stock_type = crafter[sender_id].get('stock_type')
+            handle_stock_image(sender_id=sender_id, image_url=image_url, stock_type=stock_type)
+
+        elif crafter[sender_id].get('current_route') == 'update_status' and crafter[sender_id].get('project_id'):
+            handle_status_image(sender_id=sender_id, image_url=image_url)
+
+
+##############################################################################
+
+def handle_start_route(sender_id):
+    """Handles message text for first communication with bot."""
+    user = add_user(sender_id=sender_id)
+    total_inprogress(sender_id=sender_id)
+    if total_inprogress(sender_id=sender_id) >= 6:
+        craftybot = [QuickReply(title="Update Status", payload="UPDATE_STATUS"), QuickReply(title="Add Stock", payload="STOCK")]
+        page.send(sender_id, "Sorry but you have reach maximum number of projects. You need to finish something before you can add another new project.", quick_replies=craftybot)
+    else:
+        craftybot = [QuickReply(title="New Project", payload="NEW_PROJECT"), QuickReply(title="Add Stock", payload="STOCK")]
+        if total_inprogress(sender_id=sender_id) != 0:
+            craftybot.append(QuickReply(title="Update Status", payload="UPDATE_STATUS"), )
+        page.send(sender_id, "How may I help you today?", quick_replies=craftybot)
+
+
+def handle_project_name(sender_id, message_text):
+    """Handles message text for naming user's new project."""  # user can't call project project
+    from lib.utilities import check_stock_count
+    if message_text:
+        project = add_project(sender_id=sender_id, name=message_text.strip())
+        crafter[sender_id]['project_id'] = project.project_id
+        if check_stock_count(stock_type='pattern', sender_id=sender_id) != 0:
+            page.send(sender_id, Template.Buttons("Please upload your pattern photo to start a new project or click to open stock gallery.", [{'type': 'web_url', 'title': 'Open Stock Gallery', 'value': server_host + '/user/{}/pattern'.format(sender_id)}]))
+        else:
+            page.send(sender_id, "Please upload your pattern photo to start a new project")
+    else:
+        page.send(sender_id,"Sorry, didn't catch that.\nPlease add a project name")
+
+
+def handle_stock_image(sender_id, image_url, stock_type):
+    """Handles message attachment for user's pattern photo."""
+    image = add_image(sender_id=sender_id, image_url=image_url)
+    stock = add_stock(image=image, stock_type=stock_type)
+    project_id = crafter[sender_id].get('project_id')
+    crafter[sender_id][stock_type + '_id'] = getattr(stock, stock_type + '_id')
+    if project_id:
+        project = add_stock_to_project(stock=stock, project_id=project_id)
+        add_next_stock_response(sender_id=sender_id, stock_type=stock_type)
+
+    else:
+        page.send(sender_id, Template.Buttons("This image has been add to your {} stock photos.To update a project say 'craftybot' or click to open your projects page".format(stock_type),[
+            {'type': 'web_url', 'title': 'Open Projects Home', 'value': server_host + '/user/{}/projects'.format(sender_id)}]))
+        crafter[sender_id] = dict()
+
+
+def handle_due_date(sender_id, message_text):
+    """Takes in the number of weeks a user has to do their new project."""
+    from lib.utilities import update_project_due_date
+    if message_text:
         try:
             weeks = int(message_text.strip())
         except:
             page.send(sender_id, "I'm sorry I didn't catch that.\nHow many weeks do you want to do this project?",)
         else:
-            user_state[sender_id] = state[6]
             project_id = crafter[sender_id].get('project_id')
-            project = Project.query.filter(Project.project_id == project_id).first()
-            project.due_at = project.created_at + timedelta(weeks=weeks)
-            db.session.commit()
+            project = update_project_due_date(project_id=project_id, weeks=weeks)
             note_no = [QuickReply(title="Note", payload="NOTE"), QuickReply(title="No Notes", payload="NO_NOTES")]
             page.send(sender_id, "Got it. Anything else you want me to know about this project", quick_replies=note_no)
+            crafter[sender_id]['due_date'] = weeks
+    else:
+        page.send(sender_id,'Please add the number of weeks until you would like to work on this project')
 
-    elif message_text and user_state.get(sender_id) == state[7]:
-        user_state[sender_id] = None
+
+def handle_project_notes(sender_id, message_text):
+    """Handles any notes the user inputs to their new project."""
+    from lib.utilities import update_project_notes
+    if message_text:
         project_id = crafter[sender_id].get('project_id')
-        project = Project.query.filter(Project.project_id == project_id).first()
-        project.notes = message_text
-        db.session.commit()
-        page.send(sender_id, "Your note has been added to your project. If you would like to get back to main menu type 'craftybot' again.")
-
-    elif message_attachments and user_state.get(sender_id) == state[1]:
-        handle_image_event_1(event=event)
-
-    elif message_attachments and user_state.get(sender_id) == state[4]:
-        handle_image_event_2(event=event)
-
-    elif message_attachments and user_state.get(sender_id) == state[8]:
-        handle_image_event_3(event=event)
-
-    elif message_attachments and user_state.get(sender_id) == state[11]:
-        handle_image_event_4(event=event)
-
-    elif message_attachments and user_state.get(sender_id) == state[12]:
-        handle_image_event_5(event=event)
+        project = update_project_notes(project_id=project_id, message_text=message_text)
+        page.send(sender_id, Template.Buttons("Your note has been added to your project. If you would like to get back to main menu type 'craftybot' again or click to view your projects page.", [
+            {'type': 'web_url', 'title': 'Open Projects Home', 'value': server_host + '/user/{}/projects'.format(sender_id)}]))
+        crafter[sender_id] = dict()
+    else:
+        page.send(sender_id,'Did you want to leave a note?')
 
 
-##############################################################################
-
-def handle_text_event_1(event):
-    """Handles message text for first communication with bot."""
-    sender_id, message, message_text, message_attachments, quick_reply, = extract_data(event)
-    new_user = User.query.filter(User.user_id == sender_id).all()
-    crafter[sender_id] = {}
-    if not new_user:
-        user = User(user_id=sender_id)
-        db.session.add(user)
-        db.session.commit()
-    total_inprogress(sender_id=sender_id)
-
-
-def handle_text_event_2(event):
-    """Handles message text for naming user's new project."""  # user can't call project project
-    sender_id, message, message_text, message_attachments, quick_reply, = extract_data(event)
-    user_state[sender_id] = state[1]
-    new_project = Project(user_id=sender_id, name=message_text, created_at='now')
-    db.session.add(new_project)
-    db.session.commit()
-    project_id = Project.query.filter(Project.name == message_text, Project.user_id == sender_id).first()
-    crafter[sender_id]['project_id'] = project_id.project_id  # can I also pull name to make text say name
-    page.send(sender_id, Template.Buttons("Please upload your first photo to start a new project or click to open stock gallery.",[
-        {'type': 'web_url', 'title': 'Open Stock Gallery', 'value': 'http://localhost:5000/fabric-gallery'}]))
-
-
-def handle_image_event_1(event):
-    """Handles message attachment for user's 1st photo."""
-    sender_id, message, message_text, message_attachments, quick_reply, = extract_data(event)
-    user_state[sender_id] = state[2]
-    first_image = Image(user_id=sender_id, url=message_attachments[0].get('payload').get('url'), created_at='now')
-    db.session.add(first_image)
-    db.session.commit()
-    crafter[sender_id]['1st_image_id'] = first_image.image_id
-    image_type = [QuickReply(title="Fabric", payload="FABRIC"), QuickReply(title="Pattern", payload="PATTERN")]
-    page.send(sender_id, "What is this an image of?", quick_replies=image_type)
-
-
-def handle_image_event_2(event):
-    """Handles message attachment for user's 2nd photo."""
-    sender_id, message, message_text, message_attachments, quick_reply, = extract_data(event)
-    user_state[sender_id] = state[5]
-    second_image = Image(user_id=sender_id, url=message_attachments[0].get('payload', {}).get('url'), created_at='now')
-    db.session.add(second_image)
+def handle_status_image(sender_id, image_url):
+    """Handles message attachment for user's update photo."""
+    from lib.utilities import add_status_update
+    image = add_image(sender_id=sender_id, image_url=image_url)
     project_id = crafter[sender_id].get('project_id')
-    db.session.commit()
-
-    if crafter[sender_id].get('pattern_id'):
-        fabric = Fabric(image_id=second_image.image_id, name='fabric', created_at='now')
-        db.session.add(fabric)
-        project_id = crafter[sender_id].get('project_id')
-        project = Project.query.filter(Project.project_id == project_id).first()
-        project.fabric_id = fabric.fabric_id
-        db.session.commit()
-    elif crafter[sender_id].get('fabric_id'):
-        pattern = Pattern(image_id=second_image.image_id, name="pattern", created_at='now')
-        db.session.add(pattern)
-        project_id = crafter[sender_id].get('project_id')
-        project = Project.query.filter(Project.project_id == project_id).first()
-        project.pattern_id = pattern.pattern_id
-        db.session.commit()
-    page.send(sender_id, "Success, How many weeks do you want to do this project?")
-
-
-def handle_image_event_3(event):
-    """Handles message attachment for user's 1st photo."""
-    sender_id, message, message_text, message_attachments, quick_reply, = extract_data(event)
-    user_state[sender_id] = None
-    update_image = Image(user_id=sender_id, url=message_attachments[0].get('payload').get('url'), created_at='now')
-    db.session.add(update_image)
-    project_id = crafter[sender_id].get('project_id')
-    project_count = db.session.query(db.func.count(Proj_Stat.proj_stat_id)).filter(Proj_Stat.project_id == project_id).first()[0]
-    update_stat = Proj_Stat(image_id=update_image.image_id, project_id=project_id, status_id=project_count+1, created_at='now')
-    db.session.add(update_stat)
-    db.session.commit()
+    update_status = add_status_update(project_id, image)
 
     project = Project.query.filter(Project.project_id == project_id).first()
-    status = Status.query.filter(Status.status_id == update_stat.status_id).first()
+    status = Status.query.filter(Status.status_id == update_status.status_id).first()
     due_date = datetime.strftime(project.due_at, "%A, %B %d, %Y")
-
-    page.send(sender_id, "YAY! You're {status}. Reminder your due date is {due_date}. To update another project say 'craftybot'".format(status=status.name, due_date=due_date))
-
-
-def handle_image_event_4(event):
-    """Handles message attachment for user's fabric stock photo."""
-    sender_id, message, message_text, message_attachments, quick_reply, = extract_data(event)
-    user_state[sender_id] = state[2]
-    image = Image(user_id=sender_id, url=message_attachments[0].get('payload').get('url'), created_at='now')
-    db.session.add(image)
-    db.session.commit()
-    fabric = Fabric(image_id=image.image_id, name="fabric", created_at='now')
-    db.session.add(fabric)
-    db.session.commit()
-    page.send(sender_id, "This image has been add to your fabric stock photos.To update another project say 'craftybot'")
-
-
-def handle_image_event_5(event):
-    """Handles message attachment for user's pattern stock photo.To update another project say 'craftybot'"""
-
-    sender_id, message, message_text, message_attachments, quick_reply, = extract_data(event)
-    user_state[sender_id] = state[2]
-    image = Image(user_id=sender_id, url=message_attachments[0].get('payload').get('url'), created_at='now')
-    db.session.add(image)
-    db.session.commit()
-    pattern = Pattern(image_id=image.image_id, name="pattern", created_at='now')
-    db.session.add(pattern)
-    db.session.commit()
-    page.send(sender_id, "This image has been add to your pattern stock photos.To update another project say 'craftybot'")
+    crafter[sender_id] = dict()
+    page.send(sender_id, Template.Buttons("YAY! You're {status}. Just a reminder, this project is due by {due_date}. To update another project say 'craftybot'".format(status=status.name, due_date=due_date), [
+            {'type': 'web_url', 'title': 'Open Projects Home', 'value': server_host + '/user/{}/projects'.format(sender_id)}]))

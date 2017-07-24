@@ -1,0 +1,33 @@
+<!doctype html>
+<html>
+<head>
+   <script src="http://code.jquery.com/jquery-1.11.3.min.js"></script>
+    <title>{{ stock_type }} Stock</title>
+    <style>
+  .image {
+    border: 1px solid #ddd;
+    border-radius: 4px;  
+    padding: 5px; 
+    width: 150px; 
+    height: 150px; 
+  }
+  .stock-photo {
+    display: inline-block;
+}
+</style>
+</head>
+<body>
+ <h1>All {{ stock_type }}</h1>
+<div class="stock-photo">      
+  {% for item in stock %}
+            <div>
+              <img class='image'src={{ item.url }}>
+               <button id = "{{ item.id }}" class="favorite-btn {{ stock_type}}"> Add to Project</button>
+            </div>
+  
+    {% endfor %}
+<script src="../../static/js/favorites.js"></script>  
+</body>
+</html>
+
+
