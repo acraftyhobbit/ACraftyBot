@@ -175,7 +175,7 @@ def delete_stock(user_id, stock_id, stock_type):
 def check_progress_status():
     """Compares when a project was last updated."""
     users=dict()
-    up_to_date = datetime.datetime.now() - timedelta(days=7)
+    up_to_date = datetime.now() - timedelta(seconds=1)
     complete = db.session.query(Proj_Stat.project_id).filter(Proj_Stat.status_id == 6).all()
     last_update = db.session.query(Project.user_id, Project.name, Project.project_id).filter(Project.updated_at < up_to_date).all()
     for user_id, name, project_id in last_update:

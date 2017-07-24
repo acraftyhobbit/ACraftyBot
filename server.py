@@ -46,7 +46,7 @@ def task_new_project(payload, event):
     if sender_id not in crafter.keys():
         crafter[sender_id] = {}
     crafter[sender_id]['current_route'] = 'new_project'
-    page.send(sender_id, "Great. What would you like to call this project?")
+    page.send(sender_id, "Got it. What would you like to call this project?")
 
 
 @page.callback(['UPDATE_STATUS'])
@@ -74,8 +74,8 @@ def task_new_stock(payload, event):
     if sender_id not in crafter.keys():
         crafter[sender_id] = {}
     crafter[sender_id]['current_route'] = 'add_stock'
-    stock_type = [QuickReply(title="Fabric Stock", payload="FABRIC_STOCK"), QuickReply(title="Pattern Stock", payload="PATTERN_STOCK")]
-    page.send(sender_id, "Great. Which stock do you want to update?", quick_replies=stock_type)
+    stock_type = [QuickReply(title="Fabric", payload="FABRIC_STOCK"), QuickReply(title="Pattern", payload="PATTERN_STOCK")]
+    page.send(sender_id, "Great! What do you want to add?", quick_replies=stock_type)
 
 
 @page.callback(['(.+)_STOCK'])
@@ -86,7 +86,7 @@ def callback_clicked_fabric_stock(payload, event):
     if sender_id not in crafter.keys():
         crafter[sender_id] = {}
     crafter[sender_id]['stock_type'] = payload.split('_')[0].lower()
-    page.send(sender_id, "Upload your photo of the {} you want to add to stock.".format(crafter[sender_id]['stock_type']))
+    page.send(sender_id, "Awesome, upload your {} photo and I'll take it from there.".format(crafter[sender_id]['stock_type']))
 
 
 @page.callback(['project_(.+)'])
@@ -98,7 +98,7 @@ def select_project_callback(payload, event):
         crafter[sender_id] = {}
     project_id = int(payload.split('_')[-1])
     crafter[sender_id]['project_id'] = project_id
-    page.send(sender_id, "Upload you newest project photo.")
+    page.send(sender_id, "I love it. Upload your newest project photo.")
 
 
 @page.callback(['NOTE'])
@@ -106,7 +106,7 @@ def callback_clicked_note(payload, event):
     """User selects note button"""
     from lib.utilities import extract_data
     sender_id, message, message_text, message_attachments, quick_reply, = extract_data(event)
-    page.send(sender_id, "Please tell me the notes about this project")
+    page.send(sender_id, "What do you want me to note about this project")
 
 
 @page.callback(['NO_NOTES'])
@@ -117,11 +117,17 @@ def callback_clicked_no_note(payload, event):
     page.send(sender_id, Template.Buttons("Your project has been saved. If you would like to get back to main menu type 'craftybot' again.", [{'type': 'web_url', 'title': 'Open Projects Home', 'value': server_host + '/user/{}/projects'.format(sender_id)}]))
     crafter[sender_id] = dict()
 
+@app.route("/")
+def craftybot_homepage():
+    """Homepage craftybot info and facebook connection"""
+    return render_template("info.html")
+
 
 @app.route("/user/<user_id>/projects")
 def all_projects(user_id):
     """Show list of projects."""
     project_dicts = list()
+    incomp_project_dicts = list()
     user = User.query.filter(User.user_id == user_id).first()
     if user:
         projects = Project.query.filter(Project.fabric_id != None, Project.pattern_id != None, Project.due_at != None, Project.user_id == user_id).order_by(Project.project_id).all()
@@ -133,7 +139,19 @@ def all_projects(user_id):
                 pattern_image=project.pattern.image.url,
                 status_images=[stat.image.url for stat in project.proj_stat])
             project_dicts.append(project_dict)
-        return render_template("WIPprojects.html", projects=project_dicts, user_id=user_id)
+        incomp_projects = Project.query.filter(Project.due_at == None, Project.user_id == user_id).order_by(Project.project_id).all()
+        for incomp_project in incomp_projects:
+            incomp_project_dict = dict(
+                project_id=incomp_project.project_id,
+                name=incomp_project.name
+                )
+            if incomp_project.fabric:
+                incomp_project_dict['fabric_image'] =incomp_project.fabric.image.url,
+            if incomp_project.pattern:
+                incomp_project_dict['pattern_image'] = incomp_project.pattern.image.url,
+            incomp_project_dicts.append(incomp_project_dict)
+
+        return render_template("WIPprojects.html", projects=project_dicts, user_id=user_id, incomp_projects=incomp_project_dicts)
     else:
         abort(404)
 

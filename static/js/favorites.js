@@ -23,7 +23,7 @@ $(function () { // this is the jquery shortcut for document.ready()
         $('#' + id).css('color', 'red'); // give our user some feedback
         $('.favorite-btn').attr("disabled", "disabled");
         alert("This fabric will be add to your new project.");
-        window.location.replace("http://localhost:5000/user/" + user_id + "/projects")
+        window.location.replace("http://02fa08db.ngrok.io" + user_id + "/projects")
     }
 
     $('.favorite-btn').click(addToProjects);

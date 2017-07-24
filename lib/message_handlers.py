@@ -52,9 +52,9 @@ def handle_start_route(sender_id):
     """Handles message text for first communication with bot."""
     user = add_user(sender_id=sender_id)
     total_inprogress(sender_id=sender_id)
-    if total_inprogress(sender_id=sender_id) >= 600:
+    if total_inprogress(sender_id=sender_id) >= 6:
         craftybot = [QuickReply(title="Update Status", payload="UPDATE_STATUS"), QuickReply(title="Add Stock", payload="STOCK")]
-        page.send(sender_id, "You have reach max for projects. You need to finish something before you can add another new project.", quick_replies=craftybot)
+        page.send(sender_id, "Sorry but you have reach maximum number of projects. You need to finish something before you can add another new project.", quick_replies=craftybot)
     else:
         craftybot = [QuickReply(title="New Project", payload="NEW_PROJECT"), QuickReply(title="Add Stock", payload="STOCK")]
         if total_inprogress(sender_id=sender_id) != 0:
@@ -73,7 +73,7 @@ def handle_project_name(sender_id, message_text):
         else:
             page.send(sender_id, "Please upload your pattern photo to start a new project")
     else:
-        page.send('please add a project name')
+        page.send(sender_id,"Sorry, didn't catch that.\nPlease add a project name")
 
 
 def handle_stock_image(sender_id, image_url, stock_type):
@@ -87,24 +87,27 @@ def handle_stock_image(sender_id, image_url, stock_type):
         add_next_stock_response(sender_id=sender_id, stock_type=stock_type)
 
     else:
-        page.send(sender_id, Template.Buttons("This image has been add to your {} stock photos.To update another project say 'craftybot' or click to open your projects page".format(stock_type),[
-            {'type': 'web_url', 'title': 'Open Projects Home', 'value': server_host + '/user/{}/projects'.format(sender_id=sender_id)}]))
+        page.send(sender_id, Template.Buttons("This image has been add to your {} stock photos.To update a project say 'craftybot' or click to open your projects page".format(stock_type),[
+            {'type': 'web_url', 'title': 'Open Projects Home', 'value': server_host + '/user/{}/projects'.format(sender_id)}]))
         crafter[sender_id] = dict()
 
 
 def handle_due_date(sender_id, message_text):
     """Takes in the number of weeks a user has to do their new project."""
     from lib.utilities import update_project_due_date
-    try:
-        weeks = int(message_text.strip())
-    except:
-        page.send(sender_id, "I'm sorry I didn't catch that.\nHow many weeks do you want to do this project?",)
+    if message_text:
+        try:
+            weeks = int(message_text.strip())
+        except:
+            page.send(sender_id, "I'm sorry I didn't catch that.\nHow many weeks do you want to do this project?",)
+        else:
+            project_id = crafter[sender_id].get('project_id')
+            project = update_project_due_date(project_id=project_id, weeks=weeks)
+            note_no = [QuickReply(title="Note", payload="NOTE"), QuickReply(title="No Notes", payload="NO_NOTES")]
+            page.send(sender_id, "Got it. Anything else you want me to know about this project", quick_replies=note_no)
+            crafter[sender_id]['due_date'] = weeks
     else:
-        project_id = crafter[sender_id].get('project_id')
-        project = update_project_due_date(project_id=project_id, weeks=weeks)
-        note_no = [QuickReply(title="Note", payload="NOTE"), QuickReply(title="No Notes", payload="NO_NOTES")]
-        page.send(sender_id, "Got it. Anything else you want me to know about this project", quick_replies=note_no)
-        crafter[sender_id]['due_date'] = weeks
+        page.send(sender_id,'Please add the number of weeks until you would like to work on this project')
 
 
 def handle_project_notes(sender_id, message_text):
@@ -117,7 +120,7 @@ def handle_project_notes(sender_id, message_text):
             {'type': 'web_url', 'title': 'Open Projects Home', 'value': server_host + '/user/{}/projects'.format(sender_id)}]))
         crafter[sender_id] = dict()
     else:
-        page.send('did you want to leave a note?')
+        page.send(sender_id,'Did you want to leave a note?')
 
 
 def handle_status_image(sender_id, image_url):
@@ -131,5 +134,5 @@ def handle_status_image(sender_id, image_url):
     status = Status.query.filter(Status.status_id == update_status.status_id).first()
     due_date = datetime.strftime(project.due_at, "%A, %B %d, %Y")
     crafter[sender_id] = dict()
-    page.send(sender_id, Template.Buttons("YAY! You're {status}. Reminder your due date is {due_date}. To update another project say 'craftybot'".format(status=status.name, due_date=due_date), [
-            {'type': 'web_url', 'title': 'Open Projects Home', 'value': server_host + '/user/{}/projects'.format(sender_id=sender_id)}]))
+    page.send(sender_id, Template.Buttons("YAY! You're {status}. Just a reminder, this project is due by {due_date}. To update another project say 'craftybot'".format(status=status.name, due_date=due_date), [
+            {'type': 'web_url', 'title': 'Open Projects Home', 'value': server_host + '/user/{}/projects'.format(sender_id)}]))

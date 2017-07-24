@@ -50,7 +50,7 @@ $(function () {
         console.log(result.id);
         var id = result.id;
         
-        // $("#" + id).remove();
+        $("#" + id).remove();
     }
 
 });

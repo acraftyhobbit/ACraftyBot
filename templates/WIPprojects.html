@@ -49,6 +49,22 @@
   </ul>
 </div>
 <div id="in_progress" style="display:none">
+  <h1>Incomplete Projects</h1>
+  <button class="select">Edit projects</button>
+  <ul style="list-style: none;">
+    {% for project in incomp_projects %}
+    <form >
+        <li>
+            <a class = 'title'>
+             {{ project['name']}} 
+            </a><br><button class="delete" id ="{{ project['project_id'] }}" style="display:none">Delete project</button>
+            <img class='image' src={{ project['pattern_image'] | default("../../static/images/grey_box.jpg")}}><img class= 'image'src={{ project['fabric_image'] | default("../../static/images/grey_box.jpg")}}>
+       </li>
+
+  {% endfor %}
+   </form>
+  </ul>
+</div>
 
 <script type="text/javascript" src="../../static/js/caleandar.js"></script>
 <script type="text/javascript" src="../../static/js/mycalendar.js"></script>  
