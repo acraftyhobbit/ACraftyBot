@@ -25,7 +25,7 @@ pyquery==1.2.17
 python-dateutil==2.6.0
 PyYAML==3.12
 requests==2.17.3
-rsa==3.4.2
+rsa==4.1
 s3transfer==0.1.10
 six==1.10.0
 slackclient==1.0.5
